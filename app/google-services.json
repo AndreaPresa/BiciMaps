@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1021921644445",
+    "firebase_url": "https://bicimaps-1521055216236.firebaseio.com",
+    "project_id": "bicimaps-1521055216236",
+    "storage_bucket": "bicimaps-1521055216236.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1021921644445:android:736a7c5148c7342b",
+        "android_client_info": {
+          "package_name": "com.example.michel.bicimaps"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1021921644445-ip7jjit9sk80bunee1ltea7k0v1l3u61.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.michel.bicimaps",
+            "certificate_hash": "ae562fa3b2d65bbf74372fa3e450a88c85e6e44a"
+          }
+        },
+        {
+          "client_id": "1021921644445-2kvitkrglo3ft48tjlbk921n7cgrmer0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzma6fsrb3sqbzpWh1x2cspTsL4w59VLY"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1021921644445-2kvitkrglo3ft48tjlbk921n7cgrmer0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
