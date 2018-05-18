@@ -1,0 +1,61 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+    <Spinner android:id="@+id/cmbMaptype"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+         />
+
+    <Spinner android:id="@+id/cmbMode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/cmbMaptype"
+
+        />
+
+    <Spinner android:id="@+id/cmbPeriod"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/cmbMode"
+
+        />
+
+
+
+    <android.support.design.widget.FloatingActionButton android:id="@+id/btn_inicioExp"
+        android:src="@drawable/ic_onoff"
+        app:backgroundTint="@color/colorPrimary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="70dp"
+        android:layout_marginEnd="37dp"
+        android:layout_marginRight="37dp" />
+
+   <!-- <android.support.design.widget.FloatingActionButton android:id="@+id/btn_stopExp"
+        android:src="@drawable/ic_onoff"
+        app:backgroundTint="@color/colorRed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="70dp"
+        android:layout_marginEnd="100dp"
+        android:layout_marginRight="100dp" />-->
+
+
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/cmbMode" />
+
+
+</RelativeLayout>

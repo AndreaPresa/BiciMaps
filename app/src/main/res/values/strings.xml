@@ -1,0 +1,27 @@
+<resources>
+
+    <!--Strings activity_main -->
+
+    <string name="app_name">BiciMaps</string>
+    <string name="login">Entra con tu cuenta...</string>
+    <string name="user">Usuario/Email</string>
+    <string name="password">Contraseña</string>
+    <string name="registro">¿Aún no estás registrado?</string>
+    <string name="registro1">¡Regístrate ahora!</string>
+    <string name="titulo">BiciMaps</string>
+    <string name="boton">Entrar</string>
+    <string name="title_activity_maps">Map</string>
+
+    <!--Strings activity_registro -->
+
+    <string name="reg_name">Nombre de usuario</string>
+    <string name="reg_email">Email</string>
+    <string name="new_account">Crear cuenta</string>
+    <string name="back_to_main">¿Ya eres miembro? Login</string>
+
+    <!--Strings activity_maps-->
+    <string name="map_type">Map</string>
+    <string name="mover">Mover</string>
+    <string name="animar">Animar</string>
+    <string name="pos">Pos</string>
+</resources>
