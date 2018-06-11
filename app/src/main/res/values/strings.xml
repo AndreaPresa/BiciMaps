@@ -20,8 +20,11 @@
     <string name="back_to_main">¿Ya eres miembro? Login</string>
 
     <!--Strings activity_maps-->
+
     <string name="map_type">Map</string>
     <string name="mover">Mover</string>
     <string name="animar">Animar</string>
     <string name="pos">Pos</string>
+
+    <string name="permission_denied_contacts">La utilización de la ubicación y de la tecnología Bluetooth es imprescindible para el correcto funcionamiento de la app. ¡Gracias y que disfrutes!</string>
 </resources>

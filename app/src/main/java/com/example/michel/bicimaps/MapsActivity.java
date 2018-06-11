@@ -1,7 +1,14 @@
 package com.example.michel.bicimaps;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.provider.Settings;
+import android.support.v4.app.DialogFragment;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -12,6 +19,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -33,6 +41,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 
 
+
 /**He implementado en esta actividad una bandera (FB_flag) para parar las actualizaciones.
 Habría que comprobar si el gps está habilitado y si no pedirle al usuario que lo habilitara*/
 
@@ -45,13 +54,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Context mContext;
 
 
-
-    private boolean FB_flag = false;
     private GoogleMap mMap;
     private GoogleApiClient client;
     private Location lastlocation;
+
     public static final int REQUEST_LOCATION_CODE = 99;
     double latitude,longitude;
+    private boolean LP_flag=false;
+    private boolean FB_flag = false;
 
     /**Los modos de experimento no están implementados.*/
 
@@ -65,7 +75,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private String modos[] = {"Manual", "Auto"};
     private Long periodos[] = {(long) 5, (long) 10, (long) 20};
     private FloatingActionButton locButton;
-    /*private FloatingActionButton stopButton;*/
+
+
 
 
 
@@ -73,18 +84,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-
-
         mContext = this;
-        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
 
+        /** Simulación */
         /**Ver con Yago porque la variable FB_flag cambia de valor aparentemente sola...*/
 
         Intent intent = getIntent();
         if (intent.getExtras()!=null) {
             FB_flag = intent.getExtras().getBoolean("FBflag");
         }
+
 
 
         //Parte de arriba del Maps Layout
@@ -107,8 +117,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
 
-
-
         //Boton inicio exp
         locButton = (FloatingActionButton) findViewById(R.id.btn_inicioExp);
         locButton.setOnClickListener(new View.OnClickListener() {
@@ -116,19 +124,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View view) {
 
                 //Bandera que permite la escritura automatica en Firebase
-                 FB_flag=true;
-
+                FB_flag=true;
 
             }
         });
 
+        /** Localización y GoogleMap*/
 
-        //Comprueba un minimo de version de SDK
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
-            checkLocationPermission();
+        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
-        }
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -138,111 +143,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mapFragment.getMapAsync(this);
         }
 
+        //Control de permisos de ubicación
+        permissions_control();
+
+        //Petición activar Bluetooth
+        isBluetoothEnabled();
+
+
 
     }
 
 
 
-
-    LocationListener locationListenerGPS = new LocationListener() {
-        @Override
-        public void onLocationChanged(Location location) {
-            lastlocation=location;
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-
-            /*if(currentLocationmMarker != null) {
-                currentLocationmMarker.remove();
-            }*/
-
-            Log.d("lat = ",""+latitude);
-            LatLng latLng = new LatLng(latitude , longitude);
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,10));
+    /** SIMULACIÓN */
 
 
-        }
-
-        public void onStatusChanged(String provider, int status, Bundle extras) {
-
-        }
-
-        public void onProviderEnabled(String provider) {
-
-        }
-
-        public void onProviderDisabled(String provider) {
-
-        }
-
-
-    };
-
-    /**Esta funcion se encarga de recoger la localizacion de OnLocationChanged y temporizar su escritura en la base de datos.
-    Esto lo hace esperando a que se determinen las condiciones del experimento y una vez hecho esto, genera automaticamente los registros */
-
-    private void save_location (Location location){
-        lastlocation  = location;
-
-        if ( FB_flag ) {
-            if (lastlocation == null){
-                Toast.makeText(getApplicationContext(), "Localizacion nula", Toast.LENGTH_SHORT).show();
-
-            }
-            else {
-                latitude = location.getLatitude();
-                longitude = location.getLongitude();
-                Bundle b = new Bundle();
-                b.putDouble("latitud", latitude);
-                b.putDouble("longitud", longitude);
-                Intent i = new Intent(MapsActivity.this, FireBaseActivity.class);
-                i.putExtra("bundleFire", b);
-                startActivity(i);
-            }
-
-        }
-
-    }
-
-
-    /** Posible función para pedirle al usuario que habilite el GPS*/
-    /*protected void onResume(){
-        super.onResume();
-        isLocationEnabled();
-    }
-
-    private void isLocationEnabled() {
-
-        if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext);
-            alertDialog.setTitle("Enable Location");
-            alertDialog.setMessage("Your locations setting is not enabled. Please enabled it in settings menu.");
-            alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
-                    Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                    startActivity(intent);
-                }
-            });
-            alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
-                    dialog.cancel();
-                }
-            });
-            AlertDialog alert=alertDialog.create();
-            alert.show();
-        }
-        else{
-            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext);
-            alertDialog.setTitle("Confirm Location");
-            alertDialog.setMessage("Your Location is enabled, please enjoy");
-            alertDialog.setNegativeButton("Back to interface",new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
-                    dialog.cancel();
-                }
-            });
-            AlertDialog alert=alertDialog.create();
-            alert.show();
-        }
-    }*/
 
 
     public void spinners(){
@@ -261,7 +176,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 new ArrayAdapter<>(this, R.layout.spinner, periodos);
         period.setAdapter(adapter2);
         adapter2.setDropDownViewResource(R.layout.spinner);
-
 
 
 
@@ -305,38 +219,218 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
+
+    /** PERMISOS Y HABILITACIONES */
+
+
+
+
+    public void permissions_control(){
+
+        //Control de Permiso de Localización
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        REQUEST_LOCATION_CODE);
+
+        }
+        //Si ya está aceptado el permiso de localización, se le pide al usuario que active la
+        //localización, en el caso de no tenerla activada
+
+        else { isLocationEnabled(); }
+
+
+
+
+
+    }
+
+
+    public void isBluetoothEnabled(){
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this,"El dispositivo no es válido para esta app", Toast.LENGTH_LONG).show();
+        }
+
+        if (!mBluetoothAdapter.isEnabled()) {
+            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
+            alertDialog.setTitle("Enable Bluetooth");
+            alertDialog.setMessage("Your Bluetooth is not enabled. Please enable it in the settings menu.");
+            alertDialog.setPositiveButton("Bluetooth Settings", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    Intent intent=new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+                    startActivity(intent);
+                }
+            });
+            alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    dialog.cancel();
+                }
+            });
+            AlertDialog alert=alertDialog.create();
+            alert.show();
+
+
+        }
+
+    }
+
+
+
+    private void isLocationEnabled() {
+
+        if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
+            alertDialog.setTitle("Enable Location");
+            alertDialog.setMessage("Your locations setting is not enabled. Please enable it in settings menu.");
+            alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                }
+            });
+            alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    dialog.cancel();
+                }
+            });
+            AlertDialog alert=alertDialog.create();
+            alert.show();
+        }
+
+    }
+
+
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+
         switch(requestCode)
+
         {
             case REQUEST_LOCATION_CODE:
-                if(grantResults.length >0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                {
-                    if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) !=  PackageManager.PERMISSION_GRANTED)
-                    {
-                        if(client == null)
-                        {
-                            buildGoogleApiClient();
-                        }
-                        mMap.setMyLocationEnabled(true);
+
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+
+                    isLocationEnabled();
+
+                else {
+
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.MyDialogTheme);
+                    builder.setMessage("Para el correcto funcionamiento de la aplicación, debes aceptar el permiso de ubicación.")
+                            .setTitle("Información importante")
+                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.cancel();
+                                }
+                            });
+                    builder.show();
+
+                    if (!LP_flag) {
+                        ActivityCompat.requestPermissions(this,
+                                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                REQUEST_LOCATION_CODE);
+                        LP_flag = true;
                     }
+
                 }
-                else
-                {
-                    Toast.makeText(this,"Permission Denied" , Toast.LENGTH_LONG).show();
-                }
+
+
         }
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
+
+
+
+        /** LOCALIZACIÓN */
+
+
+
+    LocationListener locationListenerGPS = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+            lastlocation=location;
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+
+            /*if(currentLocationmMarker != null) {
+                currentLocationmMarker.remove();
+            }*/
+
+            Log.d("lat = ",""+latitude);
+            LatLng latLng = new LatLng(latitude , longitude);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,10));
+
+
+        }
+
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        public void onProviderDisabled(String provider) {
+
+        }
+
+
+    };
+
+    //Esta funcion se encarga de recoger la localizacion de OnLocationChanged y temporizar su escritura en la base de datos.
+    //Esto lo hace esperando a que se determinen las condiciones del experimento y una vez hecho esto, genera automaticamente los registros
+
+    private void save_location (Location location){
+        lastlocation  = location;
+
+        if (FB_flag) {
+            if (lastlocation == null){
+                Toast.makeText(getApplicationContext(), "Localizacion nula", Toast.LENGTH_SHORT).show();
+
+            }
+            else {
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
+                Bundle b = new Bundle();
+                b.putDouble("latitud", latitude);
+                b.putDouble("longitud", longitude);
+                Intent i = new Intent(MapsActivity.this, FireBaseActivity.class);
+                i.putExtra("bundleFire", b);
+                startActivity(i);
+            }
+
+        }
+
+    }
+
+
+
+
+    /** GOOGLEMAP */
+
+
+
+
+     // Manipulates the map once available.
+     // This callback is triggered when the map is ready to be used.
+     // This is where we can add markers or lines, add listeners or move the camera. In this case,
+     // we just add a marker near Sydney, Australia.
+     // If Google Play services is not installed on the device, the user will be prompted to install
+     // it inside the SupportMapFragment. This method will only be triggered once the user has
+     // installed Google Play services and returned to the app.
+
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -346,6 +440,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
         }
+
 
     }
 
@@ -359,7 +454,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         client.connect();
 
     }
-
 
 
 
@@ -379,37 +473,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     1000,
                     5,
                     locationListenerGPS);
-/*
-            isLocationEnabled();
-*/
+
         }
     }
 
-
-    public boolean checkLocationPermission()
-    {
-        if(ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED ) {
-
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)) {
-
-                ActivityCompat.requestPermissions(this,
-                        new String[] {Manifest.permission.ACCESS_FINE_LOCATION },
-                        REQUEST_LOCATION_CODE);
-            }
-            else {
-                ActivityCompat.requestPermissions(this,
-                        new String[] {Manifest.permission.ACCESS_FINE_LOCATION },
-                        REQUEST_LOCATION_CODE);
-            }
-
-            return false;
-        }
-        else
-            return true;
-    }
 
 
     @Override
