@@ -71,6 +71,7 @@ public class FireBaseActivity extends AppCompatActivity {
                           Intent i = new Intent(FireBaseActivity.this, MapsActivity.class);
                           i.putExtra("FBflag",false);
                           startActivity(i);
+                          onDestroy();
 
                       }
                   });

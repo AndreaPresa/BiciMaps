@@ -4,6 +4,9 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
 import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
 import android.bluetooth.BluetoothAdapter;
@@ -28,7 +31,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -40,6 +45,12 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.util.Set;
+import java.util.UUID;
 
 
 /**He implementado en esta actividad una bandera (FB_flag) para parar las actualizaciones.
@@ -59,11 +70,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Location lastlocation;
 
     public static final int REQUEST_LOCATION_CODE = 99;
-    double latitude,longitude;
-    private boolean LP_flag=false;
+    double latitude, longitude;
+    private boolean LP_flag = false;
     private boolean FB_flag = false;
 
-    /**Los modos de experimento no están implementados.*/
+    /**
+     * Los modos de experimento no están implementados.
+     */
 
     private Spinner mapsOptions;
     private Spinner mode;
@@ -77,6 +90,257 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FloatingActionButton locButton;
 
 
+    EditText send_data;
+    TextView view_data;
+    private static final UUID MY_UUID_INSECURE =
+            UUID.fromString("00000000-0000-1000-8000-00805F9B34FB");
+    private static final int REQUEST_ENABLE_BT = 1;
+    private BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    private BluetoothDevice mmDevice;
+    private Handler handler;
+    ConnectedThread mConnectedThread;
+    String TAG = "MapsActivity";
+    StringBuilder messages;
+    private UUID deviceUUID;
+
+
+
+    //Pairing process
+    public void pairDevice(View v) {
+
+        //Comprobamos que el dispositivo soporta la tecnología bluetooth
+        if(bluetoothAdapter!=null){
+        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+        Log.e("MapsActivity", "" + pairedDevices.size());
+        if (pairedDevices.size() > 0) {
+            Object[] devices = pairedDevices.toArray();
+            BluetoothDevice device = (BluetoothDevice) devices[0];
+            //ParcelUuid[] uuid = device.getUuids();
+            Log.e("MapsActivity", "" + device);
+            //Log.e("MapsActivity", "" + uuid)
+
+            ConnectThread connect = new ConnectThread(device, MY_UUID_INSECURE);
+            connect.start();
+        }
+
+
+        }
+    }
+
+    private class ConnectThread extends Thread {
+        private BluetoothSocket mmSocket;
+
+        public ConnectThread(BluetoothDevice device, UUID uuid) {
+            Log.d(TAG, "ConnectThread: started.");
+            mmDevice = device;
+            deviceUUID = uuid;
+        }
+
+        public void run() {
+            BluetoothSocket tmp = null;
+            Log.i(TAG, "RUN mConnectThread ");
+
+            // Get a BluetoothSocket for a connection with the
+            // given BluetoothDevice
+            try {
+                Log.d(TAG, "ConnectThread: Trying to create InsecureRfcommSocket using UUID: "
+                        + MY_UUID_INSECURE);
+                tmp = mmDevice.createRfcommSocketToServiceRecord(MY_UUID_INSECURE);
+            } catch (IOException e) {
+                Log.e(TAG, "ConnectThread: Could not create InsecureRfcommSocket " + e.getMessage());
+            }
+
+            mmSocket = tmp;
+
+            // Make a connection to the BluetoothSocket
+
+            try {
+                // This is a blocking call and will only return on a
+                // successful connection or an exception
+                mmSocket.connect();
+
+            } catch (IOException e) {
+                // Close the socket
+                try {
+                    mmSocket.close();
+                    Log.d(TAG, "run: Closed Socket.");
+                } catch (IOException e1) {
+                    Log.e(TAG, "mConnectThread: run: Unable to close connection in socket " + e1.getMessage());
+                }
+                Log.d(TAG, "run: ConnectThread: Could not connect to UUID: " + MY_UUID_INSECURE);
+            }
+
+            //will talk about this in the 3rd video
+            connected(mmSocket);
+        }
+
+        public void cancel() {
+            try {
+                Log.d(TAG, "cancel: Closing Client Socket.");
+                mmSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "cancel: close() of mmSocket in Connectthread failed. " + e.getMessage());
+            }
+        }
+    }
+
+    private void connected(BluetoothSocket mmSocket) {
+        Log.d(TAG, "connected: Starting.");
+
+        // Start the thread to manage the connection and perform transmissions
+        ConnectedThread mConnectedThread = new ConnectedThread(mmSocket);
+        mConnectedThread.start();
+    }
+
+    private class ConnectedThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
+
+        public ConnectedThread(BluetoothSocket socket) {
+            Log.d(TAG, "ConnectedThread: Starting.");
+
+            mmSocket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+
+
+            try {
+                tmpIn = mmSocket.getInputStream();
+                tmpOut = mmSocket.getOutputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
+
+        public void run() {
+            byte[] buffer = new byte[1024];  // buffer store for the stream
+
+            int bytes; // bytes returned from read()
+
+            // Keep listening to the InputStream until an exception occurs
+            while (true) {
+                // Read from the InputStream
+                try {
+                    bytes = mmInStream.read(buffer);
+                    final String incomingMessage = new String(buffer, 0, bytes);
+                    Log.d(TAG, "InputStream: " + incomingMessage);
+
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            view_data.setText(incomingMessage);
+                        }
+                    });
+
+
+                } catch (IOException e) {
+                    Log.e(TAG, "write: Error reading Input Stream. " + e.getMessage());
+                    break;
+                }
+            }
+        }
+
+
+        public void write(byte[] bytes) {
+            String text = new String(bytes, Charset.defaultCharset());
+            Log.d(TAG, "write: Writing to outputstream: " + text);
+            try {
+                mmOutStream.write(bytes);
+            } catch (IOException e) {
+                Log.e(TAG, "write: Error writing to output stream. " + e.getMessage());
+            }
+        }
+
+        /* Call this from the main activity to shutdown the connection */
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) {
+            }
+        }
+    }
+
+
+    public void SendMessage(View v) {
+        byte[] bytes = send_data.getText().toString().getBytes(Charset.defaultCharset());
+        mConnectedThread.write(bytes);
+    }
+
+
+
+
+    public void Start_Server (View view){
+
+        AcceptThread accept = new AcceptThread();
+        accept.start();
+
+    }
+
+    private class AcceptThread extends Thread {
+
+        // The local server socket
+        private final BluetoothServerSocket mmServerSocket;
+
+        public AcceptThread() {
+            // Use a temporary object that is later assigned to mmServerSocket
+            // because mmServerSocket is final.
+            BluetoothServerSocket tmp = null;
+            try {
+                // MY_UUID is the app's UUID string, also used by the client code.
+                tmp = bluetoothAdapter.listenUsingRfcommWithServiceRecord("HC05", MY_UUID_INSECURE);
+            } catch (IOException e) {
+                Log.e(TAG, "Socket's listen() method failed", e);
+            }
+            mmServerSocket = tmp;
+        }
+
+        public void run() {
+            BluetoothSocket socket = null;
+            // Keep listening until exception occurs or a socket is returned.
+            while (true) {
+                try {
+                    socket = mmServerSocket.accept();
+                } catch (IOException e) {
+                    Log.e(TAG, "Socket's accept() method failed", e);
+                    break;
+                }
+
+                if (socket != null) {
+                    // A connection was accepted. Perform work associated with
+                    // the connection in a separate thread.
+/*
+                    manageMyConnectedSocket(socket);
+*/
+                    try {
+                        mmServerSocket.close();
+                    } catch (IOException e) {
+                        Log.e(TAG, "Socket's close() method failed", e);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Closes the connect socket and causes the thread to finish.
+        public void cancel() {
+            try {
+                mmServerSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Could not close the connect socket", e);
+            }
+        }
+    }
+
+
+
+
+
+
 
 
 
@@ -84,7 +348,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        mContext = this;
+
+        bluetoothManager mBluetoothManager = new bluetoothManager();
+        Location location;
+
+
+        send_data = (EditText) findViewById(R.id.editText);
+        view_data = (TextView) findViewById(R.id.textView);
+
+        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new
+                    Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+
+
+
+
+
+
+
+
 
 
         /** Simulación */
@@ -94,7 +378,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (intent.getExtras()!=null) {
             FB_flag = intent.getExtras().getBoolean("FBflag");
         }
-
 
 
         //Parte de arriba del Maps Layout
@@ -150,8 +433,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         isBluetoothEnabled();
 
 
-
     }
+
+
+
+
+
+
 
 
 
@@ -250,14 +538,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void isBluetoothEnabled(){
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        if (mBluetoothAdapter == null) {
+        if (bluetoothAdapter == null) {
             Toast.makeText(this,"El dispositivo no es válido para esta app", Toast.LENGTH_LONG).show();
         }
 
-        if (!mBluetoothAdapter.isEnabled()) {
-            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
+        if (!bluetoothAdapter.isEnabled()) {
+
+            bluetoothAdapter.enable();
+            /*AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
             alertDialog.setTitle("Enable Bluetooth");
             alertDialog.setMessage("Your Bluetooth is not enabled. Please enable it in the settings menu.");
             alertDialog.setPositiveButton("Bluetooth Settings", new DialogInterface.OnClickListener(){
@@ -272,7 +561,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             });
             AlertDialog alert=alertDialog.create();
-            alert.show();
+            alert.show();*/
 
 
         }
@@ -284,9 +573,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void isLocationEnabled() {
 
         if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+
             AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
             alertDialog.setTitle("Enable Location");
-            alertDialog.setMessage("Your locations setting is not enabled. Please enable it in settings menu.");
+            alertDialog.setMessage("Your location is not enabled. Please enable it in settings menu.");
             alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener(){
                 public void onClick(DialogInterface dialog, int which){
                     Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
