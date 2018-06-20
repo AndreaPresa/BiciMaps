@@ -55,7 +55,6 @@ public class FireBaseActivity extends AppCompatActivity {
         clear_button = (FloatingActionButton) findViewById(R.id.btn_backToMap);
 
 
-
         Intent intent = getIntent();
         intent.getExtras();
 
@@ -69,9 +68,12 @@ public class FireBaseActivity extends AppCompatActivity {
                       public void onClick(View view) {
                           dbLocations.removeValue();
                           Intent i = new Intent(FireBaseActivity.this, MapsActivity.class);
-                          i.putExtra("FBflag",false);
+/*
+                          //Los modos de Flag son necesarios para que FB_flag no cambie de valor solo...
+                          //Lo que se hace es que se crea una nueva task y se eliminan las demás actividades
+*/                        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                           startActivity(i);
-                          onDestroy();
+                          onPause();
 
                       }
                   });
@@ -159,10 +161,6 @@ public class FireBaseActivity extends AppCompatActivity {
 
 
 
-
-
-
-
               }
     }
 
@@ -173,6 +171,7 @@ public class FireBaseActivity extends AppCompatActivity {
 
 
     }
+
 
 
     @Override

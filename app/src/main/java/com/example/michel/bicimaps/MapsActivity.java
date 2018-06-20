@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ListFragment;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
@@ -32,6 +33,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ListAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -49,6 +51,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -64,7 +68,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationManager locationManager;
     Context mContext;
 
-
     private GoogleMap mMap;
     private GoogleApiClient client;
     private Location lastlocation;
@@ -72,7 +75,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public static final int REQUEST_LOCATION_CODE = 99;
     double latitude, longitude;
     private boolean LP_flag = false;
-    private boolean FB_flag = false;
+    private boolean FB_flag;
 
     /**
      * Los modos de experimento no están implementados.
@@ -90,27 +93,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FloatingActionButton locButton;
 
 
+
+    //UUID generada en uuiggenerator.net
+    private static final UUID uuid = UUID.fromString("28b88383-4770-46b8-ac20-9f1d0dff17c7");
+    private static final int REQUEST_ENABLE_BT = 1;
+
     EditText send_data;
     TextView view_data;
-    private static final UUID MY_UUID_INSECURE =
-            UUID.fromString("00000000-0000-1000-8000-00805F9B34FB");
-    private static final int REQUEST_ENABLE_BT = 1;
+
     private BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-    private BluetoothDevice mmDevice;
-    private Handler handler;
+    private BluetoothDevice mDevice;
+    private BluetoothDevice []  pairedDevicesArray;
+    private Handler mHandler;
+/*
     ConnectedThread mConnectedThread;
+*/
     String TAG = "MapsActivity";
     StringBuilder messages;
     private UUID deviceUUID;
-
-
-
+/*
     //Pairing process
     public void pairDevice(View v) {
 
         //Comprobamos que el dispositivo soporta la tecnología bluetooth
         if(bluetoothAdapter!=null){
         Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+
+
+
         Log.e("MapsActivity", "" + pairedDevices.size());
         if (pairedDevices.size() > 0) {
             Object[] devices = pairedDevices.toArray();
@@ -122,6 +132,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             ConnectThread connect = new ConnectThread(device, MY_UUID_INSECURE);
             connect.start();
         }
+
 
 
         }
@@ -256,7 +267,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
-        /* Call this from the main activity to shutdown the connection */
+        *//* Call this from the main activity to shutdown the connection *//*
         public void cancel() {
             try {
                 mmSocket.close();
@@ -313,9 +324,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (socket != null) {
                     // A connection was accepted. Perform work associated with
                     // the connection in a separate thread.
-/*
+*//*
                     manageMyConnectedSocket(socket);
-*/
+*//*
                     try {
                         mmServerSocket.close();
                     } catch (IOException e) {
@@ -341,43 +352,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-
+*/
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        mContext= MapsActivity.this;
+
+        FB_flag = false;
+
+
+/*
+         view_data = findViewById(R.id.view_Bluetooth);
+           pairDevice(view_data);
 
         bluetoothManager mBluetoothManager = new bluetoothManager();
-        Location location;
+
 
 
         send_data = (EditText) findViewById(R.id.editText);
         view_data = (TextView) findViewById(R.id.textView);
 
-        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled()) {
+         if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new
                     Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
 
+*/
 
 
 
 
-
-
-
-
-
-        /** Simulación */
-        /**Ver con Yago porque la variable FB_flag cambia de valor aparentemente sola...*/
-
-        Intent intent = getIntent();
-        if (intent.getExtras()!=null) {
-            FB_flag = intent.getExtras().getBoolean("FBflag");
-        }
+        /** Simulación
+        Ver con Yago porque la variable FB_flag cambia de valor aparentemente sola...*/
 
 
         //Parte de arriba del Maps Layout
@@ -395,26 +405,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                save_location(lastlocation);
                 mHandler.postDelayed(this, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
+                save_location(lastlocation);
             }
         }, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
 
-        //Boton inicio exp
+        //Boton inicio experimentos
         locButton = (FloatingActionButton) findViewById(R.id.btn_inicioExp);
         locButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
                 //Bandera que permite la escritura automatica en Firebase
-                FB_flag=true;
+                FB_flag = true;
 
             }
         });
 
         /** Localización y GoogleMap*/
 
-        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -425,6 +434,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(mapFragment != null){
             mapFragment.getMapAsync(this);
         }
+
+        locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+
 
         //Control de permisos de ubicación
         permissions_control();
@@ -544,8 +556,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         if (!bluetoothAdapter.isEnabled()) {
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
 
-            bluetoothAdapter.enable();
+
             /*AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
             alertDialog.setTitle("Enable Bluetooth");
             alertDialog.setMessage("Your Bluetooth is not enabled. Please enable it in the settings menu.");
@@ -566,6 +580,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
 
+
+    }
+
+        //Función que controla la respuesta a la activación del Bluetooth
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_ENABLE_BT) {
+            // Make sure the request was successful
+            if (resultCode == RESULT_OK) {
+                bluetoothAdapter.enable();
+                Toast.makeText(mContext, "Bluetooth enabled correctly", Toast.LENGTH_SHORT).show();
+
+                // The user picked a contact.
+                // The Intent's data Uri identifies which contact was selected.
+
+                // Do something with the contact here (bigger example below)
+            }
+            else {
+                Toast.makeText(mContext, "Error while enabling Bluetooth. Try again", Toast.LENGTH_SHORT).show();
+
+            }
+        }
     }
 
 
@@ -574,7 +610,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
 
-            AlertDialog.Builder alertDialog=new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
+            AlertDialog.Builder alertDialog=new AlertDialog.Builder(MapsActivity.this, R.style.Theme_AppCompat);
             alertDialog.setTitle("Enable Location");
             alertDialog.setMessage("Your location is not enabled. Please enable it in settings menu.");
             alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener(){
@@ -615,7 +651,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 else {
 
-                    AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.MyDialogTheme);
+                    AlertDialog.Builder builder = new AlertDialog.Builder(mContext, R.style.MyDialogTheme);
                     builder.setMessage("Para el correcto funcionamiento de la aplicación, debes aceptar el permiso de ubicación.")
                             .setTitle("Información importante")
                             .setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -777,9 +813,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
     }
 
+    @Override
+    protected void onResume(){
+
+        super.onResume();
+        FB_flag=false;
+
+    }
+
+    @Override
+    protected void onPause(){
+
+        super.onPause();
+        //Paramos el proceso de apuntar si la actividad queda en segundo plano
 
 
 
+    }
 
 
 
