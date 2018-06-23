@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent intent =
-                        new Intent(MainActivity.this, MapsActivity.class);
+                        new Intent(MainActivity.this, BluetoothActivity.class);
                 startActivity(intent);
             }
         });
@@ -47,9 +47,9 @@ public class MainActivity extends AppCompatActivity {
         Registro.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent1=
+                Intent intent=
                         new Intent(MainActivity.this, RegistroActivity.class);
-                startActivity(intent1);
+                startActivity(intent);
             }
         });
 

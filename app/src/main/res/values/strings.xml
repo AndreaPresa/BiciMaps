@@ -1,4 +1,8 @@
 <resources>
+    <!--Strings activity_bluetooth -->
+    <string name="txt_bt">Para empezar, conecta tu smartphone con el módulo HC05</string>
+    <string name="txt_bt1">BiciMaps</string>
+
 
     <!--Strings activity_main -->
 

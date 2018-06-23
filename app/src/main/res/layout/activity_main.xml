@@ -54,20 +54,25 @@
             android:textColor="#ffffff"
             android:paddingTop="10dp"/>
 
-        <TextView android:id="@+id/Reg2Txt"
+
+        <TextView
+            android:id="@+id/Reg2Txt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:drawablePadding="30dp"
             android:text="@string/registro1"
             android:textColor="#ffffff"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
-        <Button android:id="@+id/BtnEntrarFirebase"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="Firebase" />
+
+
+    <Button
+        android:id="@+id/BtnEntrarFirebase"
+        android:layout_marginTop="90dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Firebase" />
 
 
     </LinearLayout>
