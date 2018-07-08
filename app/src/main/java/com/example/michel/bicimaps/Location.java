@@ -9,15 +9,17 @@ package com.example.michel.bicimaps;
 public class Location {
     private double lat;
     private double lon;
+    private int pm;
 
     public Location(){
 
     }
 
-    public Location(  double lat, double lon)
+    public Location(double lat, double lon, int pm)
     {
         this.lat = lat;
         this.lon = lon;
+        this.pm  = pm;
     }
 
     public double getLat(){
@@ -33,6 +35,11 @@ public class Location {
     public void setLon(double lon){
                 this.lon = lon;
     }
+
+    public int getPm() { return pm;}
+
+    public void setPm(int pm) { this.pm = pm; }
+
 
     @Override
     public String toString() {

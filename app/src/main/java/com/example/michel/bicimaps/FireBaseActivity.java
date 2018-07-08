@@ -12,6 +12,8 @@ import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.text.DecimalFormat;
+
 
 
 /* 9/05 No consigo crear hijos en Firebase: por lo que parece hay un problema con el contador_locs*/
@@ -47,6 +49,8 @@ public class FireBaseActivity extends AppCompatActivity {
 
     FirebaseRecyclerAdapter mAdapter;
 
+    DecimalFormat f = new DecimalFormat("##.000000");
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,7 +58,7 @@ public class FireBaseActivity extends AppCompatActivity {
 
         clear_button = (FloatingActionButton) findViewById(R.id.btn_backToMap);
 
-
+        //Recibo el primer intent al crear la actividad
         Intent intent = getIntent();
         intent.getExtras();
 
@@ -79,9 +83,6 @@ public class FireBaseActivity extends AppCompatActivity {
                   });
 
 
-
-
-
         RecyclerView recycler = findViewById(R.id.lstLocations);
         recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setHasFixedSize(true);
@@ -90,31 +91,32 @@ public class FireBaseActivity extends AppCompatActivity {
         //Creo el bundle que recibira la nueva localizacion para apuntarla
         if (intent.getExtras()!=null) {
 
-
             Bundle bundle = intent.getBundleExtra("bundleFire");
             double lat = bundle.getDouble("latitud");
             double lon = bundle.getDouble("longitud");
+            int pm = bundle.getInt("pm");
 
+            double lat_r = (double) Math.round(lat * 100) / 100;
+            double lon_r = (double) Math.round(lon * 100) / 100;
 
 
             Location newLocation = new Location();
-            newLocation.setLat(lat);
-            newLocation.setLon(lon);
+            newLocation.setLat(lat_r);
+            newLocation.setLon(lon_r);
+            newLocation.setPm(pm);
 
             //Metemos un contador para ir añadiendo localizaciones
 
-
             String loc_1 = "loc";
             String loc_2 =  contador_locs + loc_1;
-            writeNewLoc(loc_2, newLocation);
-
+            writeNewLocation(loc_2, newLocation);
             contador_locs++;
 
         }
 
         mAdapter =
                 new FirebaseRecyclerAdapter<Location, LocationHolder>(
-                        Location.class, R.layout.listitem_titular, LocationHolder.class, dbLocations) {
+                        Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations) {
 
 
                     @Override
@@ -122,6 +124,7 @@ public class FireBaseActivity extends AppCompatActivity {
                         /*locViewholder.setPosition(position);*/
                         locViewholder.setLatitud(loc.getLat());
                         locViewholder.setLongitud(loc.getLon());
+                        locViewholder.setPM(loc.getPm());
 
                     }
                 };
@@ -133,6 +136,7 @@ public class FireBaseActivity extends AppCompatActivity {
 
 
     //Este metodo recoge el intent que se le envia de nuevo al ser LaunchMode=SingleTop
+
     protected void onNewIntent(Intent intent){
 
 
@@ -144,19 +148,24 @@ public class FireBaseActivity extends AppCompatActivity {
                   Bundle bundle = intent.getBundleExtra("bundleFire");
                   double lat = bundle.getDouble("latitud");
                   double lon = bundle.getDouble("longitud");
+                  int pm = bundle.getInt("pm");
+
+                  double lat_r = (double) Math.round(lat * 100) / 100;
+                  double lon_r = (double) Math.round(lon * 100) / 100;
 
 
 
                   Location newLocation = new Location();
-                  newLocation.setLat(lat);
-                  newLocation.setLon(lon);
+                  newLocation.setLat(lat_r);
+                  newLocation.setLon(lon_r);
+                  newLocation.setPm(pm);
 
                   //Metemos un contador para ir añadiendo localizaciones
 
 
                   String loc_1 = "loc";
                   String loc_2 =  contador_locs + loc_1;
-                  writeNewLoc(loc_2, newLocation);
+                  writeNewLocation(loc_2, newLocation);
                   contador_locs++;
 
 
@@ -181,7 +190,7 @@ public class FireBaseActivity extends AppCompatActivity {
     }
 
 
-    private void writeNewLoc(String locs, Location loc) {
+    private void writeNewLocation(String locs, Location loc) {
 
         //el metodo push() permite crear nuevos hijos sin sobreescribirlos
 

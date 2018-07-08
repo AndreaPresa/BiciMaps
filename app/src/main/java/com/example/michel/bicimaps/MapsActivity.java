@@ -8,6 +8,9 @@ import android.app.ListFragment;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.location.Criteria;
 import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
 import android.bluetooth.BluetoothAdapter;
@@ -28,6 +31,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -52,6 +56,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -92,8 +97,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Long periodos[] = {(long) 5, (long) 10, (long) 20};
     private FloatingActionButton locButton;
 
+    private String provider_NETWORK;
+    private String provider_GPS;
 
-
+    private int PM_FB_counter;
+    private static final int PMDefault = 0;
+    private int PMData;
+    private int [] PMData_array;
+    private int PMData_counter;
+    private final int PMData_max = 10;
 
 
 
@@ -107,15 +119,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         FB_flag = false;
 
 
+        Intent bindIntent = new Intent(this, BluetoothActivity.class);
+        startService(bindIntent);
 
-        /** Simulación
-        Ver con Yago porque la variable FB_flag cambia de valor aparentemente sola...*/
+        //Inicializo PMDataCounter
+        PMData_counter=0;
+
+        //Declaro el vector de enteros y lo inicializo
+        PMData_array = new int[PMData_max];
+        Arrays.fill(PMData_array, 0);
+        //Inicializo PM_FB_Counter
+        PM_FB_counter=0;
+        //Registro el Broadcast para recibir el dato de PM
+
+        LocalBroadcastManager.getInstance(mContext).registerReceiver(mMessageReceiver,
+                        new IntentFilter("PM_Data"));
+
+        /** Simulación */
 
 
         //Parte de arriba del Maps Layout
         mapsOptions = (Spinner) findViewById(R.id.cmbMaptype);
         mode = (Spinner) findViewById(R.id.cmbMode);
         period = (Spinner) findViewById(R.id.cmbPeriod);
+
+
 
 
         //Funcion que crea los spinners
@@ -162,7 +190,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //Control de permisos de ubicación
         permissions_control();
-
 
 
     }
@@ -361,6 +388,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             Log.d("lat = ",""+latitude);
             LatLng latLng = new LatLng(latitude , longitude);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,15));
+
+
+        }
+
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        public void onProviderDisabled(String provider) {
+
+        }
+
+
+    };
+
+    LocationListener locationListenerNetwork = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+            lastlocation=location;
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+
+            /*if(currentLocationmMarker != null) {
+                currentLocationmMarker.remove();
+            }*/
+
+            Log.d("lat = ",""+latitude);
+            LatLng latLng = new LatLng(latitude , longitude);
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,10));
 
 
@@ -389,15 +449,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (FB_flag) {
             if (lastlocation == null){
-                Toast.makeText(getApplicationContext(), "Localizacion nula", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Localización nula", Toast.LENGTH_SHORT).show();
+                changeProvider();
 
             }
             else {
+
+
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
                 Bundle b = new Bundle();
                 b.putDouble("latitud", latitude);
                 b.putDouble("longitud", longitude);
+                b.putInt("pm", PMData_array[PM_FB_counter]);
+                if(PM_FB_counter==PMData_max-1) {
+                    PM_FB_counter = 0;
+                }
+                else {
+                    PM_FB_counter++;
+                }
                 Intent i = new Intent(MapsActivity.this, FireBaseActivity.class);
                 i.putExtra("bundleFire", b);
                 startActivity(i);
@@ -406,6 +476,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
     }
+
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // Get extra data included in the Intent
+             PMData = intent.getIntExtra("TestData", PMDefault);
+             PMData_array[PMData_counter]=PMData;
+             //Cuando llega a 10 elementos, sobreeescribo el vector
+            if(PMData_counter==PMData_max-1) {
+                PMData_counter = 0;
+            }
+            else {
+                PMData_counter++;
+            }
+
+        }
+
+
+    };
 
 
 
@@ -428,7 +517,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
         }
@@ -456,15 +546,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Situamos la camara en Madrid
 
         LatLng madrid = new LatLng(40.4167754,-3.7037901999999576);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(madrid,13));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(madrid,12));
 
         if(ContextCompat.checkSelfPermission(getApplicationContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION ) == PackageManager.PERMISSION_GRANTED) {
+            //Cambio el GPS provider por NETWORK Provider para no depender de satelites.
 
-            locationManager.requestLocationUpdates( LocationManager.GPS_PROVIDER,
-                    1000,
-                    5,
-                    locationListenerGPS);
+                locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER,
+                        1000,
+                        5,
+                        locationListenerGPS);
+
 
         }
     }
@@ -498,6 +590,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
+    public void changeProvider (){
+
+        Criteria crit = new Criteria();
+        crit.setPowerRequirement(Criteria.POWER_LOW);
+        crit.setAccuracy(Criteria.ACCURACY_COARSE);
+        provider_NETWORK = locationManager.getBestProvider(crit, true);
+
+        Criteria crit2 = new Criteria();
+        crit2.setAccuracy(Criteria.ACCURACY_FINE);
+        provider_GPS = locationManager.getBestProvider(crit2, true);
+
+        if (locationManager.isProviderEnabled(provider_GPS)){
+            locationManager.getBestProvider(crit, false);
+
+        }
+        else if (locationManager.isProviderEnabled(provider_NETWORK)){
+            locationManager.getBestProvider(crit2,false);
+
+
+        }
+    }
 
 
 
