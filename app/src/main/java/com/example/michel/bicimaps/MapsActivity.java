@@ -574,7 +574,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     } else {
                         PM_FB_counter++;
                     }
-                    save_loc_PM_flag=false; //Espero hasta la siguiente emdida correcta
+                    save_loc_PM_flag=false; //Espero hasta la siguiente medida correcta
                     Intent i = new Intent(MapsActivity.this, FireBaseActivity.class);
                     i.putExtra("bundleFire", b);
                     startActivity(i);
@@ -626,23 +626,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-
-        /* Aquí es donde tenemos que apuntar los datos en el mapa  */
-
-        try {
-            // Customise the styling of the base map using a JSON object defined
-            // in a raw resource file.
-            boolean success = googleMap.setMapStyle(
-                    MapStyleOptions.loadRawResourceStyle(
-                            this, R.raw.earthquakes_with_usa));
-
-            if (!success) {
-                Log.e(TAG, "Style parsing failed.");
-            }
-        } catch (Resources.NotFoundException e) {
-            Log.e(TAG, "Can't find style. Error: ", e);
-        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {

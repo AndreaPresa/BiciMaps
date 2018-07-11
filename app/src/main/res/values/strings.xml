@@ -15,6 +15,8 @@
     <string name="titulo">BiciMaps</string>
     <string name="boton">Entrar</string>
     <string name="title_activity_maps">Map</string>
+    <string name="google_credentials">1021921644445-2kvitkrglo3ft48tjlbk921n7cgrmer0.apps.googleusercontent.com</string>
+
 
     <!--Strings activity_registro -->
 
