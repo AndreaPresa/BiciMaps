@@ -10,8 +10,12 @@ import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
+import android.content.res.ColorStateList;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.location.Criteria;
 import android.provider.Settings;
+import android.renderscript.ScriptGroup;
 import android.support.v4.app.DialogFragment;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
@@ -50,6 +54,16 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,6 +84,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener
 {
+    private static final String TAG = "MapStyleError";
     LocationManager locationManager;
     Context mContext;
 
@@ -93,9 +108,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private int loc_request_time;
 
     private String tipos_mapa[] = {"Normal", "Satélite", "Híbrido"};
-    private String modos[] = {"Manual", "Auto"};
+    private String modos[] = {"RealTime", "Histórico"};
     private Long periodos[] = {(long) 5, (long) 10, (long) 20};
     private FloatingActionButton locButton;
+
+
+    private boolean mMap_locationFlag = true;
+    private FloatingActionButton location_onButton;
+    private FloatingActionButton readButton;
+    private DatabaseReference dbLocations;
+    List<WeightedLatLng> latLngList=null;
+
 
     private String provider_NETWORK;
     private String provider_GPS;
@@ -107,8 +130,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private int PMData_counter;
     private final int PMData_max = 10;
 
+    private char start_PM='p';
+    private char finish_PM='s';
+    private boolean PM_flag=false;
 
-
+    private boolean save_loc_PM_flag=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,7 +144,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         FB_flag = false;
 
-
         Intent bindIntent = new Intent(this, BluetoothActivity.class);
         startService(bindIntent);
 
@@ -127,7 +152,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //Declaro el vector de enteros y lo inicializo
         PMData_array = new int[PMData_max];
-        Arrays.fill(PMData_array, 0);
+        Arrays.fill(PMData_array, -1);
         //Inicializo PM_FB_Counter
         PM_FB_counter=0;
         //Registro el Broadcast para recibir el dato de PM
@@ -135,15 +160,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LocalBroadcastManager.getInstance(mContext).registerReceiver(mMessageReceiver,
                         new IntentFilter("PM_Data"));
 
-        /** Simulación */
+        /** SIMULACIÓN */
 
 
         //Parte de arriba del Maps Layout
         mapsOptions = (Spinner) findViewById(R.id.cmbMaptype);
         mode = (Spinner) findViewById(R.id.cmbMode);
         period = (Spinner) findViewById(R.id.cmbPeriod);
-
-
 
 
         //Funcion que crea los spinners
@@ -160,19 +183,110 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
 
-        //Boton inicio experimentos
-        locButton = (FloatingActionButton) findViewById(R.id.btn_inicioExp);
-        locButton.setOnClickListener(new View.OnClickListener() {
+        //Boton eliminar localizacion
+        location_onButton = (FloatingActionButton) findViewById(R.id.btn_Locs);
+        location_onButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-                //Bandera que permite la escritura automatica en Firebase
-                FB_flag = true;
+                if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+
+                    //Cambio el valor para que se muestre o no
+                    if (mMap_locationFlag) {
+                        mMap_locationFlag = !mMap_locationFlag;
+                        int id = getResources().getIdentifier("ic_location_off", "drawable", "com.example.michel.bicimaps");
+                        location_onButton.setImageResource(id);
+                        mMap.setMyLocationEnabled(false);
+
+
+                    } else if (!mMap_locationFlag) {
+                        mMap_locationFlag = !mMap_locationFlag;
+                        int id = getResources().getIdentifier("ic_location_on", "drawable", "com.example.michel.bicimaps");
+                        location_onButton.setImageResource(id);
+                        mMap.setMyLocationEnabled(true);
+
+                    }
+
+                }
+            }
+        });
+
+
+        //Boton read Data from FB
+        locButton = (FloatingActionButton) findViewById(R.id.btn_inicioExp);
+        locButton.setOnClickListener(new View.OnClickListener() {
+            Intent bindIntent = new Intent(mContext, BluetoothActivity.class);
+            @Override
+            public void onClick(View view) {
+                if(!PM_flag) {
+                    locButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
+/*
+                    bindIntent.putExtra("PM", start_PM);
+*/
+                    PM_flag=true;
+                    //Bandera que permite la escritura automatica en Firebase
+                    FB_flag = true;
+                }
+
+                else if(PM_flag){
+                    locButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorWhite)));
+                    bindIntent.putExtra("PM", finish_PM);
+                    PM_flag=false;
+                    startService(bindIntent);
+                    FB_flag=false;
+
+                }
+
+/*
+                startService(bindIntent);
+*/
+
 
             }
         });
 
-        /** Localización y GoogleMap*/
+
+        //Boton inicio experimentos
+        readButton = (FloatingActionButton) findViewById(R.id.btn_ReadFB);
+        readButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if(latLngList!=null){
+                addHeatMap();
+                }
+
+            }
+        });
+
+
+        dbLocations =
+                FirebaseDatabase.getInstance().getReference()
+                        .child("locations");
+        latLngList = new ArrayList<>();
+        dbLocations.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                latLngList.clear();
+                for (DataSnapshot postSnapshot: dataSnapshot.getChildren()) {
+                    com.example.michel.bicimaps.Location loc;
+                    loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
+                    LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
+                    WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
+                    latLngList.add(data);
+                }
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.d("READ OP CANCELLED", "No reading from FB");
+
+            }
+        });
+
+        /** LOCALIZACIÓN Y GOOGLEMAP */
 
 
 
@@ -195,14 +309,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-
-
-
-
-
-
-
-    /** SIMULACIÓN */
 
 
 
@@ -361,10 +467,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 REQUEST_LOCATION_CODE);
                         LP_flag = true;
                     }
-
                 }
-
-
         }
     }
 
@@ -454,23 +557,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
             else {
+                /** AQUI HAY QUE LLAMAR AL SERVICIO DE BT Y DARLE UNA P!!*/
 
-
-                latitude = location.getLatitude();
-                longitude = location.getLongitude();
-                Bundle b = new Bundle();
-                b.putDouble("latitud", latitude);
-                b.putDouble("longitud", longitude);
-                b.putInt("pm", PMData_array[PM_FB_counter]);
-                if(PM_FB_counter==PMData_max-1) {
-                    PM_FB_counter = 0;
+                Intent bindIntent = new Intent(mContext, BluetoothActivity.class);
+                bindIntent.putExtra("PM", start_PM);
+                startService(bindIntent);
+                if(PMData!=0 && save_loc_PM_flag) {
+                    latitude = location.getLatitude();
+                    longitude = location.getLongitude();
+                    Bundle b = new Bundle();
+                    b.putDouble("latitud", latitude);
+                    b.putDouble("longitud", longitude);
+                    b.putInt("pm", PMData_array[PM_FB_counter]);
+                    if (PM_FB_counter == PMData_max - 1) {
+                        PM_FB_counter = 0;
+                    } else {
+                        PM_FB_counter++;
+                    }
+                    save_loc_PM_flag=false; //Espero hasta la siguiente emdida correcta
+                    Intent i = new Intent(MapsActivity.this, FireBaseActivity.class);
+                    i.putExtra("bundleFire", b);
+                    startActivity(i);
                 }
-                else {
-                    PM_FB_counter++;
-                }
-                Intent i = new Intent(MapsActivity.this, FireBaseActivity.class);
-                i.putExtra("bundleFire", b);
-                startActivity(i);
             }
 
         }
@@ -482,14 +590,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         public void onReceive(Context context, Intent intent) {
             // Get extra data included in the Intent
              PMData = intent.getIntExtra("TestData", PMDefault);
-             PMData_array[PMData_counter]=PMData;
-             //Cuando llega a 10 elementos, sobreeescribo el vector
-            if(PMData_counter==PMData_max-1) {
-                PMData_counter = 0;
-            }
-            else {
-                PMData_counter++;
-            }
+           if(PMData!=0) {
+               save_loc_PM_flag=true; //He recibido una medida correcta!
+               PMData_array[PMData_counter] = PMData;
+               //Cuando llega a 10 elementos, sobreeescribo el vector
+               if (PMData_counter == PMData_max - 1) {
+                   PMData_counter = 0;
+               } else {
+                   PMData_counter++;
+               }
+           }
 
         }
 
@@ -517,13 +627,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+
+        /* Aquí es donde tenemos que apuntar los datos en el mapa  */
+
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.earthquakes_with_usa));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             buildGoogleApiClient();
-            mMap.setMyLocationEnabled(true);
+            if(mMap_locationFlag) {
+                mMap.setMyLocationEnabled(true);
+            }
         }
-
-
     }
 
 
@@ -552,7 +679,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Manifest.permission.ACCESS_FINE_LOCATION ) == PackageManager.PERMISSION_GRANTED) {
             //Cambio el GPS provider por NETWORK Provider para no depender de satelites.
 
-                locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER,
+                locationManager.requestLocationUpdates(locationManager.NETWORK_PROVIDER,
                         1000,
                         5,
                         locationListenerGPS);
@@ -583,14 +710,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onPause(){
 
         super.onPause();
-        //Paramos el proceso de apuntar si la actividad queda en segundo plano
-
-
 
     }
 
 
     public void changeProvider (){
+
+        //No termina de funcionar correctamente! Mirar
 
         Criteria crit = new Criteria();
         crit.setPowerRequirement(Criteria.POWER_LOW);
@@ -617,13 +743,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
+    private void addHeatMap(){
+       HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
+                .weightedData(latLngList)
+                .build();
+      TileOverlay mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+      mOverlay.setVisible(true);
 
 
-
-
-
-
-
+    }
 
 
 }

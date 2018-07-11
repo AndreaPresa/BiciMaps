@@ -23,11 +23,34 @@
 
         />
 
+    <android.support.design.widget.FloatingActionButton android:id="@+id/btn_Locs"
+        android:src="@drawable/ic_location_on"
+        app:backgroundTint="@color/colorPrimary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="230dp"
+        android:layout_marginEnd="37dp"
+        android:layout_marginRight="37dp" />
+
+    <android.support.design.widget.FloatingActionButton android:id="@+id/btn_ReadFB"
+        android:src="@drawable/ic_read"
+        app:backgroundTint="@color/colorPrimary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="150dp"
+        android:layout_marginEnd="37dp"
+        android:layout_marginRight="37dp" />
+
 
 
     <android.support.design.widget.FloatingActionButton android:id="@+id/btn_inicioExp"
         android:src="@drawable/ic_onoff"
-        app:backgroundTint="@color/colorPrimary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"

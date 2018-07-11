@@ -1,6 +1,7 @@
 package com.example.michel.bicimaps;
 
 import android.annotation.SuppressLint;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -12,6 +13,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.drawable.Drawable;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
@@ -32,6 +34,8 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +60,9 @@ public class BluetoothActivity extends Service {
     private ConnectingThread mConnectingThread;
     private ConnectedThread mConnectedThread;
 
+    private char order;
+    private boolean stop_fan_Flag=false;
+
     private Context mContext;
 
 
@@ -69,7 +76,7 @@ public class BluetoothActivity extends Service {
     private boolean stopThread;
     private StringBuilder recDataString = new StringBuilder();
     final int handlerState = 1;//used to identify handler message
-    private int Pm;
+    private int Pm=0;
 
 
 
@@ -80,6 +87,7 @@ public class BluetoothActivity extends Service {
         Log.d("BT SERVICE", "SERVICE CREATED");
         stopThread = false;
         mContext = this;
+        checkBTState();
 
     }
 
@@ -87,42 +95,99 @@ public class BluetoothActivity extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("BT SERVICE", "SERVICE STARTED");
+
+        if (intent.getExtras() != null) {
+            Bundle b = intent.getExtras();
+            order = b.getChar("PM");
+            if (order == 's') {
+                stop_fan_Flag = true;
+
+            }
+            /*if(mConnectedThread == null){
+                    checkBTState();
+
+            }*/
+            //Arranco los threads
+/*
+            checkBTState();
+*/
+        }
+        if (mConnectedThread != null) {
+            mConnectedThread.write(String.valueOf(order));
+
+        }
+
+
         mBTHandler = new Handler() {
 
-            /**  ESTO ES UN HANDLE MESSAGE ASI QUE ESTA ESPERANDO RECIBIR UN MENSAJE, POR ESO NO ENTRA */
+            /**
+             * ESTO ES UN HANDLE MESSAGE ASI QUE ESTA ESPERANDO RECIBIR UN MENSAJE
+             */
             public void handleMessage(android.os.Message msg) {
                 Log.d("DEBUG", "handleMessage");
                 //Aqui entra igualmente, porque msg.what siempre vale lo que se ponga en handlerState
                 if (msg.what == handlerState) {                                     //if message is what we want
+                    int decenaPM = 0;
+                    int unidadPM = 0;
                     String readMessage = (String) msg.obj;
-
-                    // msg.arg1 = bytes from connect thread
                     recDataString.append(readMessage);
                     String recData = recDataString.toString();
-                    //Me daba error porque no se puede convertir la cadena que envia
-                    //el modulo " " a integer.. encontre esa regular expression que funciona
-                    if(recData.matches("\\d+(?:\\.\\d+)?")){
-                        Pm = Integer.parseInt(recData.substring(0, 1));
+                    int recData_length = recData.length();
+
+                    if (stop_fan_Flag) {  //Caso de que haya que parar
+                        if (recData != null && !recData.isEmpty()) {
+                            for (int i = 0; i < recData_length; i++) {
+                                if (recData.charAt(i) == 's') {
+                                    mConnectedThread.write(String.valueOf(recData.charAt(i)));
+                                    stop_fan_Flag=false;
+
+                                }
+
+                            }
+
+                        }
                     }
-                    else Pm=0;
-                    Log.d("RECORDED", recDataString.toString());
-                    // Do stuff here with your data, like adding it to the database
 
-                    Intent intent = new Intent("PM_Data");
-                    intent.putExtra("TestData", Pm);
-                    LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+                        if (recData != null && !recData.isEmpty()) {
+                            for (int i = 0; i < recData_length; i++) {
+                                if (Character.isDigit(recData.charAt(i))) {
+                                    if (recData_length - i != 1) { //Si tenemos dos numeros al final
+                                        if (Character.isDigit(recData.charAt(i + 1))) {
+                                            unidadPM = Character.getNumericValue(recData.charAt(i + 1));
+                                            decenaPM = Character.getNumericValue(recData.charAt(i));
+                                        }
+                                    } else unidadPM = Character.getNumericValue(recData.charAt(i));
 
+                                }
+                            }
+
+                            Pm = decenaPM * 10 + unidadPM;
+
+                        } else {
+                            Pm = 0;
+                        }
+
+                        Log.d("RECORDED", recDataString.toString());
+                        // Do stuff here with your data, like adding it to the database
+
+                        Intent intent = new Intent("PM_Data");
+                        intent.putExtra("TestData", Pm);
+                        LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+
+/*
+                    disconnect();
+*/
                 }
-                recDataString.delete(0, recDataString.length());                    //clear all string data
+                    recDataString.delete(0, recDataString.length());                    //clear all string data
             }
 
 
-      };
+        };
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
-        checkBTState();
         return super.onStartCommand(intent, flags, startId);
-                }
+
+
+    }
 
 
     private void checkBTState() {
@@ -166,7 +231,7 @@ public class BluetoothActivity extends Service {
             // Get a BluetoothSocket to connect with the given BluetoothDevice
             try {
                 // MY_UUID is the app's UUID string, also used by the server code
-                tmp = device.createRfcommSocketToServiceRecord(my_uuid);
+                tmp = mmDevice.createRfcommSocketToServiceRecord(my_uuid);
             } catch (IOException e) {
             }
             mmSocket = tmp;
@@ -179,21 +244,27 @@ public class BluetoothActivity extends Service {
             // Establish the Bluetooth socket connection.
             // Cancelling discovery as it may slow down connection
             mBluetoothAdapter.cancelDiscovery();
+            BluetoothSocket tmp = null;
+
             try {
                 mmSocket.connect();
                 Log.d("DEBUG BT", "BT SOCKET CONNECTED");
                 mConnectedThread = new ConnectedThread(mmSocket);
                 mConnectedThread.start();
+
                 Log.d("DEBUG BT", "CONNECTED THREAD STARTED");
                 //I send a character when resuming.beginning transmission to check device is connected
                 //If it is not an exception will be thrown in the write method and finish() will be called
-                mConnectedThread.write("1");
+/*
+                mConnectedThread.write(""+ order);
+*/
             } catch (IOException e) {
                 try {
                     Log.d("DEBUG BT", "SOCKET CONNECTION FAILED : " + e.toString());
                     Log.d("BT SERVICE", "SOCKET CONNECTION FAILED, STOPPING SERVICE");
                     mmSocket.close();
                     stopSelf();
+
                 } catch (IOException e2) {
                     Log.d("DEBUG BT", "SOCKET CLOSING FAILED :" + e2.toString());
                     Log.d("BT SERVICE", "SOCKET CLOSING FAILED, STOPPING SERVICE");
@@ -258,6 +329,7 @@ public class BluetoothActivity extends Service {
                         String readMessage = new String(buffer, 0, bytes);
                         Log.d("DEBUG BT PART", "CONNECTED THREAD " + readMessage);
                         // Send the obtained bytes to the UI Activity via handler
+
                         mBTHandler.obtainMessage(handlerState, bytes, -1, readMessage).sendToTarget();
                     } catch (IOException e) {
                         Log.d("DEBUG BT", e.toString());
@@ -294,6 +366,22 @@ public class BluetoothActivity extends Service {
             }
         }
 
+
+     public void disconnect(){
+         mBTHandler.removeCallbacksAndMessages(null);
+         stopThread = true;
+         if (mConnectedThread != null) {
+             mConnectedThread.closeStreams();
+             mConnectedThread=null;
+         }
+         if (mConnectingThread != null) {
+             mConnectingThread.closeSocket();
+             mConnectingThread=null;
+         }
+
+
+     }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -306,14 +394,29 @@ public class BluetoothActivity extends Service {
             mConnectingThread.closeSocket();
         }
         Log.d("SERVICE", "onDestroy");
+
+/*
         unregisterReceiver(mBroadcastReceiver);
+*/
+
+        Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
+
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+       /* if(intent.getExtras()!=null) {
+            Bundle b = intent.getExtras();
+            order = b.getChar("PM");
+        }*/
         return null;
+
     }
+
+
+
+
 
            /* if(mmSocket.isConnected()){
                 runOnUiThread(new Runnable() {

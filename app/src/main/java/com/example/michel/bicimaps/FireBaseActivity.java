@@ -49,7 +49,6 @@ public class FireBaseActivity extends AppCompatActivity {
 
     FirebaseRecyclerAdapter mAdapter;
 
-    DecimalFormat f = new DecimalFormat("##.000000");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,8 +95,8 @@ public class FireBaseActivity extends AppCompatActivity {
             double lon = bundle.getDouble("longitud");
             int pm = bundle.getInt("pm");
 
-            double lat_r = (double) Math.round(lat * 100) / 100;
-            double lon_r = (double) Math.round(lon * 100) / 100;
+            double lat_r = (double) Math.round(lat * 1000) / 1000;
+            double lon_r = (double) Math.round(lon * 1000) / 1000;
 
 
             Location newLocation = new Location();
@@ -150,8 +149,8 @@ public class FireBaseActivity extends AppCompatActivity {
                   double lon = bundle.getDouble("longitud");
                   int pm = bundle.getInt("pm");
 
-                  double lat_r = (double) Math.round(lat * 100) / 100;
-                  double lon_r = (double) Math.round(lon * 100) / 100;
+                  double lat_r = (double) Math.round(lat * 1000) / 1000;
+                  double lon_r = (double) Math.round(lon * 1000) / 1000;
 
 
 
