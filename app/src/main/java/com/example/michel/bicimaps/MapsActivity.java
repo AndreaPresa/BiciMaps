@@ -3,6 +3,7 @@ package com.example.michel.bicimaps;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.ListFragment;
 import android.bluetooth.BluetoothDevice;
@@ -40,6 +41,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CalendarView;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ListAdapter;
 import android.widget.Spinner;
@@ -69,9 +72,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -105,18 +111,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Spinner mode;
     private Spinner period;
 
+    private ArrayAdapter<String> adapter_maps;
+    private ArrayAdapter<String> adapter_mode;
+    private ArrayAdapter<Long> adapter_time;
+
+
+
     private int loc_request_time;
 
+    private String dateSpinner="Histórico";
+
     private String tipos_mapa[] = {"Normal", "Satélite", "Híbrido"};
-    private String modos[] = {"RealTime", "Histórico"};
+    private String modos[] = {"FireBase", "RealTime", dateSpinner};
+    private ArrayList<String> modos_lst;
     private Long periodos[] = {(long) 5, (long) 10, (long) 20};
     private FloatingActionButton locButton;
+
+    private FloatingActionButton calButton;
+    private Calendar myCalendar;
+    private EditText dateET;
 
 
     private boolean mMap_locationFlag = true;
     private FloatingActionButton location_onButton;
     private FloatingActionButton readButton;
-    private DatabaseReference dbLocations;
+    private DatabaseReference dbLocations=null;
     List<WeightedLatLng> latLngList=null;
 
 
@@ -142,6 +161,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         mContext= MapsActivity.this;
 
+
+
         FB_flag = false;
 
         Intent bindIntent = new Intent(this, BluetoothActivity.class);
@@ -161,12 +182,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         new IntentFilter("PM_Data"));
 
         /** SIMULACIÓN */
+        //Calendario
+        myCalendar=myCalendar.getInstance();
+
 
 
         //Parte de arriba del Maps Layout
         mapsOptions = (Spinner) findViewById(R.id.cmbMaptype);
         mode = (Spinner) findViewById(R.id.cmbMode);
         period = (Spinner) findViewById(R.id.cmbPeriod);
+
+        modos_lst = new ArrayList<>(Arrays.asList(modos));
+
 
 
         //Funcion que crea los spinners
@@ -182,6 +209,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 save_location(lastlocation);
             }
         }, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
+
+
+
+        final DatePickerDialog.OnDateSetListener date = new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker view, int year, int monthOfYear,
+                                  int dayOfMonth) {
+                myCalendar.set(Calendar.YEAR, year);
+                myCalendar.set(Calendar.MONTH, monthOfYear);
+                myCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+                updateLabel();
+            }
+
+        };
+
+
+
+
+        //Boton calendario solo habilitado si se pulsa en historico en el spinner
+        calButton = (FloatingActionButton) findViewById(R.id.btn_calendar);
+        calButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // TODO Auto-generated method stub
+
+                new DatePickerDialog(MapsActivity.this, R.style.MyDialogTheme,  date, myCalendar
+                        .get(Calendar.YEAR), myCalendar.get(Calendar.MONTH),
+                        myCalendar.get(Calendar.DAY_OF_MONTH)).show();
+
+            }
+        });
 
         //Boton eliminar localizacion
         location_onButton = (FloatingActionButton) findViewById(R.id.btn_Locs);
@@ -261,30 +319,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
 
-        dbLocations =
-                FirebaseDatabase.getInstance().getReference()
-                        .child("locations");
-        latLngList = new ArrayList<>();
-        dbLocations.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                latLngList.clear();
-                for (DataSnapshot postSnapshot: dataSnapshot.getChildren()) {
-                    com.example.michel.bicimaps.Location loc;
-                    loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
-                    LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
-                    WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
-                    latLngList.add(data);
-                }
 
-            }
 
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.d("READ OP CANCELLED", "No reading from FB");
 
-            }
-        });
+
+
+
 
         /** LOCALIZACIÓN Y GOOGLEMAP */
 
@@ -308,6 +348,51 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    //Metodo para escribir la fecha en la pantalla
+
+    private void updateLabel() {
+        String myFormat = "dd-MM-yyyy"; //In which you need put here
+        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.FRANCE);
+        //Quitamos el antiguo spinner
+        adapter_mode.remove(dateSpinner);
+        dateSpinner = sdf.format(myCalendar.getTime());
+        adapter_mode.insert(dateSpinner,2);
+        //Actualizo el valor de la referencia cada vez que se cambia de fecha
+        dbLocations =
+                FirebaseDatabase.getInstance().getReference()
+                        .child("locations").child(dateSpinner);
+        //Tengo que conseguir que cuando se escoja un dia que no tenga datos, no se pare la ejecucion
+        if (dbLocations != null) {
+            latLngList = new ArrayList<>();
+            latLngList.clear();
+            dbLocations.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    latLngList.clear();
+                    for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
+                        com.example.michel.bicimaps.Location loc;
+                        loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
+                        LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
+                        WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
+                        latLngList.add(data);
+                    }
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    Log.d("READ OP CANCELLED", "No reading from FB");
+
+                }
+            });
+        }
+
+        else {
+            Toast.makeText(mContext,"No hay datos para la fecha elegida", Toast.LENGTH_LONG).show();;
+
+        }
+
+    }
 
 
 
@@ -315,22 +400,53 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void spinners(){
 
-        ArrayAdapter<String> adapter =
+        adapter_maps =
                 new ArrayAdapter<>(this, R.layout.spinner, tipos_mapa);
-        adapter.setDropDownViewResource(R.layout.spinner);
-        mapsOptions.setAdapter(adapter);
+        adapter_maps.setDropDownViewResource(R.layout.spinner);
+        mapsOptions.setAdapter(adapter_maps);
 
-        ArrayAdapter<String> adapter1 =
-                new ArrayAdapter<>(this, R.layout.spinner, modos);
-        adapter1.setDropDownViewResource(R.layout.spinner);
-        mode.setAdapter(adapter1);
+        adapter_mode =
+                new ArrayAdapter<>(this, R.layout.spinner, modos_lst);
+        adapter_mode.setDropDownViewResource(R.layout.spinner);
+        mode.setAdapter(adapter_mode);
 
-        ArrayAdapter<Long> adapter2 =
+        adapter_time =
                 new ArrayAdapter<>(this, R.layout.spinner, periodos);
-        period.setAdapter(adapter2);
-        adapter2.setDropDownViewResource(R.layout.spinner);
+        period.setAdapter(adapter_time);
+        adapter_time.setDropDownViewResource(R.layout.spinner);
 
 
+        mode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView_mode, View view, int i, long l) {
+                long id = adapterView_mode.getItemIdAtPosition(i);
+
+                //Caso Firebase
+                if (id==0){
+                    locButton.setVisibility(View.VISIBLE);
+                    calButton.setVisibility(View.GONE);
+                }
+
+                //Caso RealTime
+                else if (id==1) {
+                    locButton.setVisibility(View.GONE);
+                    calButton.setVisibility(View.GONE);
+                }
+
+                //Caso Historico o fechas
+                else if(id>1) {
+                    calButton.setVisibility(View.VISIBLE);
+                    locButton.setVisibility(View.GONE);
+
+                }
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
 
 
         //Funcion asignacion tipo de mapa
@@ -409,7 +525,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
 
-            AlertDialog.Builder alertDialog=new AlertDialog.Builder(MapsActivity.this, R.style.Theme_AppCompat);
+            AlertDialog.Builder alertDialog=new AlertDialog.Builder(MapsActivity.this, R.style.MyDialogTheme);
             alertDialog.setTitle("Enable Location");
             alertDialog.setMessage("Your location is not enabled. Please enable it in settings menu.");
             alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener(){
@@ -569,6 +685,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     b.putDouble("latitud", latitude);
                     b.putDouble("longitud", longitude);
                     b.putInt("pm", PMData_array[PM_FB_counter]);
+                    b.putString("date", dateSpinner);
                     if (PM_FB_counter == PMData_max - 1) {
                         PM_FB_counter = 0;
                     } else {

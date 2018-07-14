@@ -8,4 +8,11 @@
         <item name="colorAccent">@android:color/background_light</item>
         <item name="android:statusBarColor">?android:attr/colorPrimary</item>
     </style>
+
+
+
+
+
+
+
 </resources>

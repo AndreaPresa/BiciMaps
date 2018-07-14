@@ -36,4 +36,9 @@ public class LocationHolder extends RecyclerView.ViewHolder {
         TextView field1 = (TextView) mView.findViewById(R.id.lblPM);
         String longitud = Integer.toString(pm);
         field1.setText(longitud);    }
+
+    public void setDH(String dh) {
+        TextView field1 = (TextView) mView.findViewById(R.id.lblFecha);
+        field1.setText(dh);    }
+
 }

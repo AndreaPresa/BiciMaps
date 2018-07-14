@@ -65,7 +65,7 @@ public class BluetoothActivity extends Service {
 
     private Context mContext;
 
-
+    
 
 
     /*
@@ -95,6 +95,7 @@ public class BluetoothActivity extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("BT SERVICE", "SERVICE STARTED");
+
 
         if (intent.getExtras() != null) {
             Bundle b = intent.getExtras();

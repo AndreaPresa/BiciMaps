@@ -7,12 +7,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import android.widget.TextView;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 
 
@@ -46,8 +49,14 @@ public class FireBaseActivity extends AppCompatActivity {
     private DatabaseReference dbLocations;
 
     private FloatingActionButton clear_button;
+    private Calendar calendar; //Para recoger fecha y hora
+    private SimpleDateFormat df;
+    private String formattedDate;
 
-    FirebaseRecyclerAdapter mAdapter;
+    private String dateMaps;
+    private TextView dateTitle;
+
+    private FirebaseRecyclerAdapter mAdapter;
 
 
     @Override
@@ -55,11 +64,16 @@ public class FireBaseActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_fire_base);
 
+        //Creo el formato para apuntar la fecha y la hora del experimento en FB
+        df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+
         clear_button = (FloatingActionButton) findViewById(R.id.btn_backToMap);
 
         //Recibo el primer intent al crear la actividad
         Intent intent = getIntent();
         intent.getExtras();
+
+        dateTitle = (TextView) findViewById(R.id.dateTitle);
 
         dbLocations =
                 FirebaseDatabase.getInstance().getReference()
@@ -94,15 +108,23 @@ public class FireBaseActivity extends AppCompatActivity {
             double lat = bundle.getDouble("latitud");
             double lon = bundle.getDouble("longitud");
             int pm = bundle.getInt("pm");
+            dateMaps = bundle.getString("date");
+            dateTitle.setText(dateMaps);
+            calendar = Calendar.getInstance();
+            if(calendar!=null){
+            formattedDate = df.format(calendar.getTime());}
+            else {formattedDate = " ";}
 
-            double lat_r = (double) Math.round(lat * 1000) / 1000;
-            double lon_r = (double) Math.round(lon * 1000) / 1000;
+            double lat_r = (double) Math.round(lat * 100000) / 100000;
+            double lon_r = (double) Math.round(lon * 100000) / 100000;
 
 
             Location newLocation = new Location();
             newLocation.setLat(lat_r);
             newLocation.setLon(lon_r);
             newLocation.setPm(pm);
+            newLocation.setDh(formattedDate);
+
 
             //Metemos un contador para ir añadiendo localizaciones
 
@@ -113,22 +135,26 @@ public class FireBaseActivity extends AppCompatActivity {
 
         }
 
-        mAdapter =
-                new FirebaseRecyclerAdapter<Location, LocationHolder>(
-                        Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations) {
+        if(dateMaps!=null) {
 
 
-                    @Override
-                    public void populateViewHolder(LocationHolder locViewholder, Location loc, int position) {
-                        /*locViewholder.setPosition(position);*/
-                        locViewholder.setLatitud(loc.getLat());
-                        locViewholder.setLongitud(loc.getLon());
-                        locViewholder.setPM(loc.getPm());
+            mAdapter =
+                    new FirebaseRecyclerAdapter<Location, LocationHolder>(
+                            Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations.child(dateMaps)) {
 
-                    }
-                };
 
-        recycler.setAdapter(mAdapter);
+                        @Override
+                        public void populateViewHolder(LocationHolder locViewholder, Location loc, int position) {
+                            locViewholder.setLatitud(loc.getLat());
+                            locViewholder.setLongitud(loc.getLon());
+                            locViewholder.setPM(loc.getPm());
+                            locViewholder.setDH(loc.getDh());
+
+                        }
+                    };
+
+            recycler.setAdapter(mAdapter);
+        }
 
 
     }
@@ -148,9 +174,13 @@ public class FireBaseActivity extends AppCompatActivity {
                   double lat = bundle.getDouble("latitud");
                   double lon = bundle.getDouble("longitud");
                   int pm = bundle.getInt("pm");
+                  calendar = Calendar.getInstance();
+                  if(calendar!=null){
+                      formattedDate = df.format(calendar.getTime());}
+                  else {formattedDate = " ";}
 
-                  double lat_r = (double) Math.round(lat * 1000) / 1000;
-                  double lon_r = (double) Math.round(lon * 1000) / 1000;
+                  double lat_r = (double) Math.round(lat * 100000) / 100000;
+                  double lon_r = (double) Math.round(lon * 100000) / 100000;
 
 
 
@@ -158,6 +188,7 @@ public class FireBaseActivity extends AppCompatActivity {
                   newLocation.setLat(lat_r);
                   newLocation.setLon(lon_r);
                   newLocation.setPm(pm);
+                  newLocation.setDh(formattedDate);
 
                   //Metemos un contador para ir añadiendo localizaciones
 
@@ -185,6 +216,7 @@ public class FireBaseActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
        /* mAdapter.cleanup();*/
     }
 
@@ -192,9 +224,13 @@ public class FireBaseActivity extends AppCompatActivity {
     private void writeNewLocation(String locs, Location loc) {
 
         //el metodo push() permite crear nuevos hijos sin sobreescribirlos
+          String dateFB = loc.getDh();
+          dateFB= dateFB.substring(0,10);
+          dbLocations.push().child(dateFB);
+          dbLocations.child(dateFB).push().child(locs);
+          dbLocations.child(dateFB).child(locs).setValue(loc);
 
-          dbLocations.push().child(locs);
-          dbLocations.child(locs).setValue(loc);
+
 
     }
 

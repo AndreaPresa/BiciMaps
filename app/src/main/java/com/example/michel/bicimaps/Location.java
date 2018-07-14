@@ -10,16 +10,18 @@ public class Location {
     private double lat;
     private double lon;
     private int pm;
+    private String dh;
 
     public Location(){
 
     }
 
-    public Location(double lat, double lon, int pm)
+    public Location(double lat, double lon, int pm, String dh)
     {
         this.lat = lat;
         this.lon = lon;
         this.pm  = pm;
+        this.dh = dh;
     }
 
     public double getLat(){
@@ -39,6 +41,10 @@ public class Location {
     public int getPm() { return pm;}
 
     public void setPm(int pm) { this.pm = pm; }
+
+    public String getDh() { return dh;}
+
+    public void setDh(String dh) {this.dh = dh;}
 
 
     @Override
