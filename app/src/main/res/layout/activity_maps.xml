@@ -7,19 +7,19 @@
     <Spinner android:id="@+id/cmbMaptype"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:soundEffectsEnabled="true" />
+        />
 
     <Spinner android:id="@+id/cmbMode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toRightOf="@id/cmbMaptype"
-        android:soundEffectsEnabled="true" />
+        />
 
     <Spinner android:id="@+id/cmbPeriod"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toRightOf="@id/cmbMode"
-        android:soundEffectsEnabled="true" />
+         />
 
     <android.support.design.widget.FloatingActionButton android:id="@+id/btn_Locs"
         android:src="@drawable/ic_location_on"
@@ -32,7 +32,7 @@
         android:layout_marginBottom="230dp"
         android:layout_marginEnd="37dp"
         android:layout_marginRight="37dp"
-        android:soundEffectsEnabled="true"
+
         />
 
     <android.support.design.widget.FloatingActionButton android:id="@+id/btn_ReadFB"
@@ -46,7 +46,7 @@
         android:layout_marginBottom="150dp"
         android:layout_marginEnd="37dp"
         android:layout_marginRight="37dp"
-        android:soundEffectsEnabled="true"
+
         />
 
 
@@ -60,7 +60,7 @@
         android:layout_marginBottom="70dp"
         android:layout_marginEnd="37dp"
         android:layout_marginRight="37dp"
-        android:soundEffectsEnabled="true"
+
         />
 
     <android.support.design.widget.FloatingActionButton android:id="@+id/btn_calendar"
@@ -71,7 +71,21 @@
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="70dp"
         android:layout_marginLeft="30dp"
-        android:soundEffectsEnabled="true"
+
+        />
+
+    <android.support.design.widget.FloatingActionButton android:id="@+id/btnFB"
+        android:src="@drawable/ic_fb"
+        app:backgroundTint="@color/colorRed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="70dp"
+        android:layout_marginEnd="37dp"
+        android:layout_marginRight="37dp"
+
         />
 
 

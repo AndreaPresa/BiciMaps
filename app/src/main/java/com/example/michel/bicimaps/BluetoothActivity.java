@@ -96,7 +96,7 @@ public class BluetoothActivity extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("BT SERVICE", "SERVICE STARTED");
 
-
+    if(intent!=null) {
         if (intent.getExtras() != null) {
             Bundle b = intent.getExtras();
             order = b.getChar("PM");
@@ -104,15 +104,16 @@ public class BluetoothActivity extends Service {
                 stop_fan_Flag = true;
 
             }
-            /*if(mConnectedThread == null){
-                    checkBTState();
+                /*if(mConnectedThread == null){
+                        checkBTState();
 
-            }*/
+                }*/
             //Arranco los threads
-/*
-            checkBTState();
-*/
+    /*
+                checkBTState();
+    */
         }
+    }
         if (mConnectedThread != null) {
             mConnectedThread.write(String.valueOf(order));
 

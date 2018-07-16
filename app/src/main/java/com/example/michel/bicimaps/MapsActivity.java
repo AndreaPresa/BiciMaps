@@ -116,10 +116,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ArrayAdapter<Long> adapter_time;
 
 
-
-    private int loc_request_time;
-
     private String dateSpinner="Histórico";
+    private String previousDateSpinner;
 
     private String tipos_mapa[] = {"Normal", "Satélite", "Híbrido"};
     private String modos[] = {"FireBase", "RealTime", dateSpinner};
@@ -130,13 +128,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FloatingActionButton calButton;
     private Calendar myCalendar;
     private EditText dateET;
+    private String today;
+    private SimpleDateFormat sdf;
+
+    private FloatingActionButton fbButton;
+
 
 
     private boolean mMap_locationFlag = true;
+    private boolean mMap_erase_Flag = false;
     private FloatingActionButton location_onButton;
     private FloatingActionButton readButton;
     private DatabaseReference dbLocations=null;
+    private DatabaseReference dbLocations1=null;
     List<WeightedLatLng> latLngList=null;
+    List<WeightedLatLng> latLngList1=null;
 
 
     private String provider_NETWORK;
@@ -154,6 +160,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean PM_flag=false;
 
     private boolean save_loc_PM_flag=false;
+    private boolean dBhaschild=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -184,6 +191,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         /** SIMULACIÓN */
         //Calendario
         myCalendar=myCalendar.getInstance();
+        String myFormat = "dd-MM-yyyy";
+        sdf = new SimpleDateFormat(myFormat, Locale.FRANCE);
+        today = sdf.format(myCalendar.getTime());
 
 
 
@@ -225,6 +235,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         };
 
 
+        //Boton mirar FB solo habilitado si se pulsa en Historico en el spinner
+
+        fbButton = (FloatingActionButton) findViewById(R.id.btnFB);
+        fbButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                //Cuando enviemos el intent desde aqui, solo pretendemos ver lo que hay en FB
+                //Mandamos tambien una bandera
+                Intent intent = new Intent(MapsActivity.this, FireBaseActivity.class);
+                Bundle b = new Bundle();
+                b.putString("date", dateSpinner);
+                intent.putExtra("onlyRead",b);
+                startActivity(intent);
+            }
+        });
 
 
         //Boton calendario solo habilitado si se pulsa en historico en el spinner
@@ -296,11 +322,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 }
 
-/*
-                startService(bindIntent);
-*/
-
-
             }
         });
 
@@ -317,10 +338,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
-
-
-
-
 
 
 
@@ -351,9 +368,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //Metodo para escribir la fecha en la pantalla
 
     private void updateLabel() {
-        String myFormat = "dd-MM-yyyy"; //In which you need put here
-        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.FRANCE);
-        //Quitamos el antiguo spinner
+
         adapter_mode.remove(dateSpinner);
         dateSpinner = sdf.format(myCalendar.getTime());
         adapter_mode.insert(dateSpinner,2);
@@ -361,36 +376,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         dbLocations =
                 FirebaseDatabase.getInstance().getReference()
                         .child("locations").child(dateSpinner);
-        //Tengo que conseguir que cuando se escoja un dia que no tenga datos, no se pare la ejecucion
-        if (dbLocations != null) {
-            latLngList = new ArrayList<>();
-            latLngList.clear();
-            dbLocations.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
-                    latLngList.clear();
-                    for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                        com.example.michel.bicimaps.Location loc;
-                        loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
-                        LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
-                        WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
-                        latLngList.add(data);
-                    }
 
+            dbLocations.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        dBhaschild = true;
+                    }
                 }
 
                 @Override
                 public void onCancelled(DatabaseError databaseError) {
-                    Log.d("READ OP CANCELLED", "No reading from FB");
+                    Log.d("READ OP CANCELLED1", "No reading from FB");
 
                 }
             });
-        }
 
-        else {
-            Toast.makeText(mContext,"No hay datos para la fecha elegida", Toast.LENGTH_LONG).show();;
+            // comprobamos si hay datos para que no se pare la ejecucion
 
-        }
+
+            if (dBhaschild) {
+                    latLngList = new ArrayList<>();
+                    latLngList.clear();
+                    dbLocations.addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+                            latLngList.clear();
+                            for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
+                                com.example.michel.bicimaps.Location loc;
+                                loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
+                                LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
+                                WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
+                                latLngList.add(data);
+                            }
+
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            Log.d("READ OP CANCELLED2", "No reading from FB");
+
+                        }
+                    });
+            }
+            else {
+                Toast.makeText(mContext, "No hay datos para la fecha elegida", Toast.LENGTH_LONG).show();
+            }
 
     }
 
@@ -425,18 +456,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (id==0){
                     locButton.setVisibility(View.VISIBLE);
                     calButton.setVisibility(View.GONE);
+                    fbButton.setVisibility(View.GONE);
+
                 }
 
                 //Caso RealTime
                 else if (id==1) {
                     locButton.setVisibility(View.GONE);
                     calButton.setVisibility(View.GONE);
+                    fbButton.setVisibility(View.GONE);
+
                 }
 
                 //Caso Historico o fechas
                 else if(id>1) {
                     calButton.setVisibility(View.VISIBLE);
                     locButton.setVisibility(View.GONE);
+                    fbButton.setVisibility(View.VISIBLE);
+
 
                 }
 
@@ -601,9 +638,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             latitude = location.getLatitude();
             longitude = location.getLongitude();
 
-            /*if(currentLocationmMarker != null) {
-                currentLocationmMarker.remove();
-            }*/
 
             Log.d("lat = ",""+latitude);
             LatLng latLng = new LatLng(latitude , longitude);
@@ -673,7 +707,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
             else {
-                /** AQUI HAY QUE LLAMAR AL SERVICIO DE BT Y DARLE UNA P!!*/
 
                 Intent bindIntent = new Intent(mContext, BluetoothActivity.class);
                 bindIntent.putExtra("PM", start_PM);
@@ -684,8 +717,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Bundle b = new Bundle();
                     b.putDouble("latitud", latitude);
                     b.putDouble("longitud", longitude);
-                    b.putInt("pm", PMData_array[PM_FB_counter]);
-                    b.putString("date", dateSpinner);
+                    b.putInt("pm", PMData_array[PM_FB_counter]); //Si estoy en modo Firebase o Re
+                    b.putString("date", today);
                     if (PM_FB_counter == PMData_max - 1) {
                         PM_FB_counter = 0;
                     } else {
@@ -839,8 +872,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
+/*
 
+    private void removeHeatMap(){
 
+        HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
+                .weightedData(latLngList)
+                .build();
+        TileOverlay mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+        mOverlay.setVisible(true);
+
+    }
+*/
 
 
     private void addHeatMap(){
@@ -852,6 +895,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     }
+
 
 
 }

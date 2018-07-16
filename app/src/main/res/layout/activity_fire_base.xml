@@ -7,8 +7,7 @@
     android:layout_height="match_parent"
     tools:context="com.example.michel.bicimaps.FireBaseActivity">
 
-    <TextView
-        android:id="@+id/dateTitle"
+    <TextView android:id="@+id/dateTitle"
         android:layout_width="327dp"
         android:layout_height="74dp"
         android:layout_above="@+id/lstLocations"
@@ -17,10 +16,9 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="-30dp" />
 
-    <android.support.v7.widget.RecyclerView
+    <android.support.v7.widget.RecyclerView android:id="@+id/lstLocations"
         android:layout_marginLeft="20dp"
         android:layout_marginTop="30dp"
-        android:id="@+id/lstLocations"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         />
