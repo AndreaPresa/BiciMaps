@@ -17,27 +17,6 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-
-
-/* 9/05 No consigo crear hijos en Firebase: por lo que parece hay un problema con el contador_locs*/
-      /*      Tampoco consigo que se escriban automaticamente una vez iniciada la actividad de Firebase*/
-      /*      Se puede controlar el tiempo de los LocationRequest tocando los intervalos
-      * No se si es por el RecyclerView porque parece que en Firebase si los crea pero luego en el movil
-      * no los muestra*/
-
-
-
-
-
-    //10/05 Arreglado. Era un problema de la escritura en Firebase, que estaba sobreescribiendo la misma localizacion
-    //Los 1000ms del onLocationChanged (LocationRequest) son 5 segundos reales.
-    //IMPORTANTE: LAUNCHMODE de FirebaseActivity es SingleTop.
-
-    //Parece que ahora los escribe de dos en dos los elementos. Hay que conseguir controlar la localizacion
-    //creando una clase LocationManager o algo así para que escribamos cada x tiempo y podamos parar y reanudar los
-    //experimentos.
-
-
 public class FireBaseActivity extends AppCompatActivity {
 
 /*
@@ -47,6 +26,8 @@ public class FireBaseActivity extends AppCompatActivity {
     private int contador_locs = 0;
     private RecyclerView recycler;
     private DatabaseReference dbLocations;
+
+    private boolean adapter_Flag=false;
 
     private FloatingActionButton clear_button;
     private Calendar calendar; //Para recoger fecha y hora
@@ -85,6 +66,9 @@ public class FireBaseActivity extends AppCompatActivity {
         clear_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                dbLocations =
+                        FirebaseDatabase.getInstance().getReference()
+                                .child("locations").child(dateMaps);
                 dbLocations.removeValue();
                 Intent i = new Intent(FireBaseActivity.this, MapsActivity.class);
 /*
@@ -121,16 +105,14 @@ public class FireBaseActivity extends AppCompatActivity {
                       formattedDate = df.format(calendar.getTime());}
                   else {formattedDate = " ";}
 
-                double lat_r = (double) Math.round(lat * 100000) / 100000;
-                double lon_r = (double) Math.round(lon * 100000) / 100000;
-
+                /*double lat_r = (double) Math.round(lat * 100000) / 100000;
+                double lon_r = (double) Math.round(lon * 100000) / 100000;*/
 
                 Location newLocation = new Location();
-                newLocation.setLat(lat_r);
-                newLocation.setLon(lon_r);
+                newLocation.setLat(lat);
+                newLocation.setLon(lon);
                 newLocation.setPm(pm);
                 newLocation.setDh(formattedDate);
-
 
 
                 //Metemos un contador para ir añadiendo localizaciones
@@ -142,13 +124,17 @@ public class FireBaseActivity extends AppCompatActivity {
 
 
                 if (dateMaps != null) {
+
                     mAdapter =
                             new FirebaseRecyclerAdapter<Location, LocationHolder>(
-                                    Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations.child(dateMaps)) {
-
+                                    Location.class, R.layout.layout_fb_adapter,
+                                    LocationHolder.class,
+                                    dbLocations.child(dateMaps)) {
 
                                 @Override
-                                public void populateViewHolder(LocationHolder locViewholder, Location loc, int position) {
+                                public void populateViewHolder(LocationHolder locViewholder,
+                                                               Location loc,
+                                                               int position) {
                                     locViewholder.setLatitud(loc.getLat());
                                     locViewholder.setLongitud(loc.getLon());
                                     locViewholder.setPM(loc.getPm());
@@ -162,11 +148,11 @@ public class FireBaseActivity extends AppCompatActivity {
             }
             else if (intent.getBundleExtra("onlyRead") != null) {
                 Bundle b = intent.getBundleExtra("onlyRead");
-                dateFB = b.getString("date");
-                dateTitle.setText(dateFB);
+                dateMaps = b.getString("date");
+                dateTitle.setText(dateMaps);
                 mAdapter =
                         new FirebaseRecyclerAdapter<Location, LocationHolder>(
-                                Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations.child(dateFB)) {
+                                Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations.child(dateMaps)) {
 
 
                             @Override
@@ -178,7 +164,9 @@ public class FireBaseActivity extends AppCompatActivity {
 
                             }
                         };
+
                 recycler.setAdapter(mAdapter);
+                adapter_Flag=true;
 
 
 
@@ -211,13 +199,13 @@ public class FireBaseActivity extends AppCompatActivity {
                       dateMaps = bundle.getString("date");
                       dateTitle.setText(dateMaps);
 
-                      double lat_r = (double) Math.round(lat * 100000) / 100000;
-                      double lon_r = (double) Math.round(lon * 100000) / 100000;
+                      /*double lat_r = (double) Math.round(lat * 100000) / 100000;
+                      double lon_r = (double) Math.round(lon * 100000) / 100000;*/
 
 
                       Location newLocation = new Location();
-                      newLocation.setLat(lat_r);
-                      newLocation.setLon(lon_r);
+                      newLocation.setLat(lat);
+                      newLocation.setLon(lon);
                       newLocation.setPm(pm);
                       newLocation.setDh(formattedDate);
 
@@ -229,7 +217,16 @@ public class FireBaseActivity extends AppCompatActivity {
                       writeNewLocation(loc_2, newLocation);
                       contador_locs++;
 
-                      if (dateMaps != null) {
+
+                  }
+
+                  else if (intent.getBundleExtra("onlyRead") != null) {
+                      Bundle b =
+                              intent.getBundleExtra("onlyRead");
+                      dateMaps = b.getString("date");
+
+                      //Si no se ha instanciado el adapter antes
+                      if (!adapter_Flag) {
                           mAdapter =
                                   new FirebaseRecyclerAdapter<Location, LocationHolder>(
                                           Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations.child(dateMaps)) {
@@ -246,28 +243,6 @@ public class FireBaseActivity extends AppCompatActivity {
                                   };
                           recycler.setAdapter(mAdapter);
                       }
-
-                  }
-
-                  else if (intent.getBundleExtra("onlyRead") != null) {
-                      Bundle b =
-                              intent.getBundleExtra("onlyRead");
-                      dateFB = b.getString("date");
-                      mAdapter =
-                              new FirebaseRecyclerAdapter<Location, LocationHolder>(
-                                      Location.class, R.layout.layout_fb_adapter, LocationHolder.class, dbLocations.child(dateFB)) {
-
-
-                                  @Override
-                                  public void populateViewHolder(LocationHolder locViewholder, Location loc, int position) {
-                                      locViewholder.setLatitud(loc.getLat());
-                                      locViewholder.setLongitud(loc.getLon());
-                                      locViewholder.setPM(loc.getPm());
-                                      locViewholder.setDH(loc.getDh());
-
-                                  }
-                              };
-                      recycler.setAdapter(mAdapter);
                   }
               }
     }
@@ -291,7 +266,6 @@ public class FireBaseActivity extends AppCompatActivity {
 
 
     private void writeNewLocation(String locs, Location loc) {
-
         //el metodo push() permite crear nuevos hijos sin sobreescribirlos
            String dateFB = loc.getDh();
            dateFB= dateFB.substring(0,10);

@@ -1,4 +1,5 @@
-package com.example.michel.bicimaps; /**
+package com.example.michel.bicimaps;
+/**
  * Created by Michel on 21/04/2018.
  */
 
@@ -15,11 +16,6 @@ public class LocationHolder extends RecyclerView.ViewHolder {
         mView = itemView;
     }
 
-   /* public void setPosition (int pos) {
-        TextView field0 = (TextView) mView.findViewById(R.id.lblPos);
-        field0.setText(pos);
-    }
-*/
     public void setLatitud(double lat) {
         TextView field = (TextView) mView.findViewById(R.id.lblLat);
         String latitud = Double.toString(lat);

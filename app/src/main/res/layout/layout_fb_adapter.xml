@@ -19,7 +19,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content">
                     <TextView android:id="@+id/lblLat1"
-                        android:text="Latitud:"
+                        android:text="Lat:"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
@@ -33,7 +33,7 @@
 
 
                     <TextView android:id="@+id/lblLon1"
-                        android:text="Longitud:"
+                        android:text="Lon:"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="40dp"

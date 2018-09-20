@@ -100,10 +100,13 @@ public class BluetoothActivity extends Service {
         if (intent.getExtras() != null) {
             Bundle b = intent.getExtras();
             order = b.getChar("PM");
+
             if (order == 's') {
                 stop_fan_Flag = true;
 
             }
+
+
                 /*if(mConnectedThread == null){
                         checkBTState();
 
@@ -126,9 +129,9 @@ public class BluetoothActivity extends Service {
              * ESTO ES UN HANDLE MESSAGE ASI QUE ESTA ESPERANDO RECIBIR UN MENSAJE
              */
             public void handleMessage(android.os.Message msg) {
-                Log.d("DEBUG", "handleMessage");
+                Log.d("DEBUG", "handleMessage" + msg);
                 //Aqui entra igualmente, porque msg.what siempre vale lo que se ponga en handlerState
-                if (msg.what == handlerState) {                                     //if message is what we want
+                if (msg.what == handlerState) {           //if message is what we want
                     int decenaPM = 0;
                     int unidadPM = 0;
                     String readMessage = (String) msg.obj;
@@ -142,7 +145,6 @@ public class BluetoothActivity extends Service {
                                 if (recData.charAt(i) == 's') {
                                     mConnectedThread.write(String.valueOf(recData.charAt(i)));
                                     stop_fan_Flag=false;
-
                                 }
 
                             }
@@ -150,24 +152,48 @@ public class BluetoothActivity extends Service {
                         }
                     }
 
-                        if (recData != null && !recData.isEmpty()) {
-                            for (int i = 0; i < recData_length; i++) {
-                                if (Character.isDigit(recData.charAt(i))) {
-                                    if (recData_length - i != 1) { //Si tenemos dos numeros al final
-                                        if (Character.isDigit(recData.charAt(i + 1))) {
-                                            unidadPM = Character.getNumericValue(recData.charAt(i + 1));
-                                            decenaPM = Character.getNumericValue(recData.charAt(i));
-                                        }
-                                    } else unidadPM = Character.getNumericValue(recData.charAt(i));
 
-                                }
-                            }
 
-                            Pm = decenaPM * 10 + unidadPM;
+                    if (recData.endsWith("\r\n")) {
 
-                        } else {
-                            Pm = 0;
+                        if(recData.charAt(0) == 'r') {
+
+                            String num = recData.substring(1, recData.length() - 2);
+                            Log.d("RECEIVED_PM", num);
+                            Pm = Integer.parseInt(num);
+
+                            Log.d("RECORDED", recDataString.toString());
+                            // Do stuff here with your data, like adding it to the database
+
+                            Intent intent = new Intent("PM_Data");
+                            intent.putExtra("TestData", Pm);
+                            LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+
                         }
+
+                        recDataString.delete(0, recDataString.length());                    //clear all string data
+                    }
+
+                    /*
+
+                    if (recData != null && !recData.isEmpty()) {
+                        for (int i = 0; i < recData_length; i++) {
+                            if (Character.isDigit(recData.charAt(i))) {
+                                if (recData_length - i != 1) { //Si tenemos dos numeros al final
+                                    if (Character.isDigit(recData.charAt(i + 1))) {
+                                        unidadPM = Character.getNumericValue(recData.charAt(i + 1));
+                                        decenaPM = Character.getNumericValue(recData.charAt(i));
+                                    }
+                                } else unidadPM = Character.getNumericValue(recData.charAt(i));
+
+                            }
+                        }
+
+                        Pm = decenaPM * 10 + unidadPM;
+
+                    } else {
+                        Pm = 0;
+                    }
 
                         Log.d("RECORDED", recDataString.toString());
                         // Do stuff here with your data, like adding it to the database
@@ -176,11 +202,13 @@ public class BluetoothActivity extends Service {
                         intent.putExtra("TestData", Pm);
                         LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
 
+                   */
+
 /*
                     disconnect();
 */
                 }
-                    recDataString.delete(0, recDataString.length());                    //clear all string data
+
             }
 
 
@@ -193,7 +221,6 @@ public class BluetoothActivity extends Service {
 
 
     private void checkBTState() {
-
 
         if (mBluetoothAdapter == null) {
             Log.d("BT SERVICE", "BLUETOOTH NOT SUPPORTED BY DEVICE, STOPPING SERVICE");
@@ -235,6 +262,8 @@ public class BluetoothActivity extends Service {
                 // MY_UUID is the app's UUID string, also used by the server code
                 tmp = mmDevice.createRfcommSocketToServiceRecord(my_uuid);
             } catch (IOException e) {
+                Log.d("RFCOMM BT", "FAIL CREATING RFCOMM SOCKET");
+
             }
             mmSocket = tmp;
         }
@@ -257,9 +286,7 @@ public class BluetoothActivity extends Service {
                 Log.d("DEBUG BT", "CONNECTED THREAD STARTED");
                 //I send a character when resuming.beginning transmission to check device is connected
                 //If it is not an exception will be thrown in the write method and finish() will be called
-/*
-                mConnectedThread.write(""+ order);
-*/
+
             } catch (IOException e) {
                 try {
                     Log.d("DEBUG BT", "SOCKET CONNECTION FAILED : " + e.toString());
@@ -418,181 +445,6 @@ public class BluetoothActivity extends Service {
 
 
 
-
-
-           /* if(mmSocket.isConnected()){
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getApplicationContext(),"HC05 connected succesfully", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-            // Do work to manage the connection (in a separate thread)
-            manageConnectedSocket(mmSocket);
-        }
-
-        *//** Will cancel an in-progress connection, and close the socket *//*
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) { }
-        }
-    }
-*/
-   /* private class CommunicationThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
-
-        public CommunicationThread (BluetoothSocket socket) {
-            mmSocket = socket;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-
-            // Get the input and output streams, using temp objects because
-            // member streams are final
-            try {
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
-            } catch (IOException e) { }
-
-            mmInStream = tmpIn;
-            mmOutStream = tmpOut;
-        }
-
-        public void run() {
-            byte[] buffer = new byte[1024];  // buffer store for the stream
-            int bytes; // bytes returned from read()
-
-            // Keep listening to the InputStream until an exception occurs
-            while (true) {
-                try {
-                    // Read from the InputStream
-                    bytes = mmInStream.read(buffer);
-                    // Send the obtained bytes to the UI activity
-                    mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-                            .sendToTarget();
-                } catch (IOException e) {
-                    break;
-                }
-            }
-        }
-
-        *//* Call this from the main activity to send data to the remote device *//*
-        public void write(byte[] bytes) {
-            try {
-                mmOutStream.write(bytes);
-            } catch (IOException e) { }
-        }
-
-        *//* Call this from the main activity to shutdown the connection *//*
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) { }
-        }
-
-    }*/
-
-   /* public void manageConnectedSocket(BluetoothSocket mBluetoothSocket){
-
-
-    }
-
-
-
-    public void btAdapters() {
-
-        final BTDevicesAdapter mBTDevicesAdapter = new BTDevicesAdapter(BluetoothActivity.this, names, addresses);
-
-
-// Create a BroadcastReceiver for ACTION_FOUND
-        mBroadcastReceiver = new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                // When discovery finds a device
-                if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    // Get the BluetoothDevice object from the Intent
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    // Add the name and address to an array adapter to show in a ListView
-                    names.add(device.getName());
-                    addresses.add(device.getAddress());
-                    mBTDevicesAdapter.notifyDataSetChanged();
-
-
-                }
-            }
-        };
-// Register the BroadcastReceiver
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(mBroadcastReceiver, filter); // Don't forget to unregister during onDestroy
-
-
-
-        for (BluetoothDevice device : mBluetoothAdapter.getBondedDevices()) {
-            names.add(device.getName());
-            addresses.add(device.getAddress());
-        }
-
-        mListView.setAdapter(mBTDevicesAdapter);
-
-
-        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String value = (String) mListView.getItemAtPosition(position);
-                 mConnectingThread = new ConnectingThread(mBluetoothAdapter.getRemoteDevice(value));
-                mConnectingThread.start();
-
-
-
-            }
-        });
-
-    }
-
-    public void isBluetoothEnabled() {
-
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(this, "El dispositivo no es válido para esta app", Toast.LENGTH_LONG).show();
-        }
-
-        if (!mBluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-
-
-        } else if (mBluetoothAdapter.isEnabled()) {
-            if (mBluetoothAdapter.isDiscovering()) {
-                mBluetoothAdapter.cancelDiscovery();
-            }
-            mBluetoothAdapter.startDiscovery();
-            btAdapters();
-
-        }
-
-
-    }
-
-    //Función que controla la respuesta a la activación del Bluetooth
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_ENABLE_BT) {
-            // Make sure the request was successful
-            if (resultCode == RESULT_OK) {
-                mBluetoothAdapter.enable();
-
-                Toast.makeText(BluetoothActivity.this, "Bluetooth enabled correctly", Toast.LENGTH_SHORT).show();
-                btAdapters();
-
-            } else {
-                Toast.makeText(BluetoothActivity.this, "Error while enabling Bluetooth. Try again", Toast.LENGTH_SHORT).show();
-
-            }
-        }
-    }
-*/
 
 
 

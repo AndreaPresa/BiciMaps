@@ -27,22 +27,24 @@ import com.google.firebase.database.FirebaseDatabase;
 
 public class MainActivity extends AppCompatActivity {
 
-        private static final String TAG ="SIGN IN FAILED" ;
-        private Button btnEntrar;
-        private TextView Registro;
-        private Button btnEntrarFire;
-        private SignInButton btnEntrarGoogle;
-        private BluetoothAdapter mBluetoothAdapter;
-        private static final int REQUEST_ENABLE_BT = 1;
-        private static final int RC_SIGN_IN = 2;
-        private Context mContext;
+    private Context mContext;
+
+    private Button btnEntrar;
+    private TextView Registro;
+    private Button btnEntrarFire;
+    private SignInButton btnEntrarGoogle;
+
+    private BluetoothAdapter mBluetoothAdapter;
+    private static final int REQUEST_ENABLE_BT = 1;
+    private static final int RC_SIGN_IN = 2;
+    private static final String TAG ="SIGN IN FAILED" ;
 
 
+    private GoogleSignInClient mGoogleSignInClient;
+    private DatabaseReference dbUsers;
+    private String user="User";
 
-        private GoogleSignInClient mGoogleSignInClient;
-        private DatabaseReference dbUsers;
 
-        private String user="User";
 
 
 
@@ -61,9 +63,6 @@ public class MainActivity extends AppCompatActivity {
 
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-/*
-                .requestIdToken(getString(R.string.google_credentials))
-*/
                 .requestEmail()
                 .build();
 
@@ -86,8 +85,6 @@ public class MainActivity extends AppCompatActivity {
         btnEntrar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-
                 Intent intent =
                         new Intent(MainActivity.this, MapsActivity.class);
                 startActivity(intent);
@@ -142,13 +139,11 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
 
-
         }
-
 
     }
 
-    //Función que controla la respuesta a la activación del Bluetooth
+    //Función que controla la respuesta a la activación del Bluetooth y el registro Google
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -158,14 +153,8 @@ public class MainActivity extends AppCompatActivity {
                 // Make sure the request was successful
                 if (resultCode == RESULT_OK) {
                     mBluetoothAdapter.enable();
-
-                    Toast.makeText(MainActivity.this, "Bluetooth enabled correctly", Toast.LENGTH_SHORT).show();
-
-                } else {
-                    Toast.makeText(MainActivity.this, "Error while enabling Bluetooth. Try again", Toast.LENGTH_SHORT).show();
-
-                }
-
+                    Toast.makeText(MainActivity.this, "Bluetooth enabled correctly", Toast.LENGTH_SHORT).show(); }
+                else { Toast.makeText(MainActivity.this, "Error while enabling Bluetooth. Try again", Toast.LENGTH_SHORT).show(); }
                 break;
 
             case RC_SIGN_IN:
@@ -184,7 +173,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.w(TAG, "Google sign in failed", e);
                     // ...
                     signinFailed();
-
                 }
 
                 break;
@@ -209,15 +197,11 @@ public class MainActivity extends AppCompatActivity {
         dbUsers =
                 FirebaseDatabase.getInstance().getReference()
                         .child("users");
-
-
         String name = account.getDisplayName();
         String familyName = account.getFamilyName();
         String email = account.getEmail();
         String id = account.getId();
-
         user=id+user;
-
         dbUsers.push().child(user);
         dbUsers.child(user).setValue(name);
 
