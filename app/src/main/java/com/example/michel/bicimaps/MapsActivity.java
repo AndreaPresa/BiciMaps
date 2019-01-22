@@ -65,6 +65,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.maps.android.heatmaps.Gradient;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 
@@ -159,6 +160,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean dBhaschild=false;
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -212,8 +214,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mHandler.postDelayed(this, Long.parseLong(String.
-                        valueOf(period.getSelectedItem()))*1000);
+                mHandler.postDelayed(this, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
                 save_location(lastlocation);
             }
         }, Long.parseLong(String.valueOf(period.getSelectedItem()))*1000);
@@ -421,8 +422,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void changeProvider (){
 
-        //No termina de funcionar correctamente! Mirar
-
         Criteria crit = new Criteria();
         crit.setPowerRequirement(Criteria.POWER_LOW);
         crit.setAccuracy(Criteria.ACCURACY_COARSE);
@@ -530,11 +529,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private void addHeatMap(){
+
         if(latLngList.size()!=0) {
             HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
                     .weightedData(latLngList)
-                    .radius(25
-                    )
+                    .radius(25)
                     .build();
             mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
             mOverlay.setVisible(true);

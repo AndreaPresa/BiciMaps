@@ -69,7 +69,7 @@ public class FireBaseActivity extends AppCompatActivity {
                 dbLocations =
                         FirebaseDatabase.getInstance().getReference()
                                 .child("locations").child(dateMaps);
-                dbLocations.removeValue();
+                //dbLocations.removeValue();
                 Intent i = new Intent(FireBaseActivity.this, MapsActivity.class);
 /*
                           //Los modos de Flag son necesarios para que FB_flag no cambie de valor solo...

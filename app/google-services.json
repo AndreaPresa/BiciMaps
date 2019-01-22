@@ -1,35 +1,35 @@
 {
   "project_info": {
-    "project_number": "1021921644445",
-    "firebase_url": "https://bicimaps-1521055216236.firebaseio.com",
-    "project_id": "bicimaps-1521055216236",
-    "storage_bucket": "bicimaps-1521055216236.appspot.com"
+    "project_number": "60847058166",
+    "firebase_url": "https://proud-gate-219520.firebaseio.com",
+    "project_id": "proud-gate-219520",
+    "storage_bucket": "proud-gate-219520.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1021921644445:android:736a7c5148c7342b",
+        "mobilesdk_app_id": "1:60847058166:android:736a7c5148c7342b",
         "android_client_info": {
           "package_name": "com.example.michel.bicimaps"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1021921644445-ip7jjit9sk80bunee1ltea7k0v1l3u61.apps.googleusercontent.com",
+          "client_id": "60847058166-2bbn6499qaai4mvu0nnfot2diraced7i.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.michel.bicimaps",
-            "certificate_hash": "ae562fa3b2d65bbf74372fa3e450a88c85e6e44a"
+            "certificate_hash": "a8666ec0cad4ad17ce171dfc386a93ca7203c047"
           }
         },
         {
-          "client_id": "1021921644445-2kvitkrglo3ft48tjlbk921n7cgrmer0.apps.googleusercontent.com",
+          "client_id": "60847058166-achveb51shdq3fus5lhch5t4pc6hekrr.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDzma6fsrb3sqbzpWh1x2cspTsL4w59VLY"
+          "current_key": "AIzaSyBdMUOF8DJexoNflasLqLMzbnElNXa3cWw"
         }
       ],
       "services": {
@@ -40,7 +40,7 @@
           "status": 2,
           "other_platform_oauth_client": [
             {
-              "client_id": "1021921644445-2kvitkrglo3ft48tjlbk921n7cgrmer0.apps.googleusercontent.com",
+              "client_id": "60847058166-achveb51shdq3fus5lhch5t4pc6hekrr.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
