@@ -6,10 +6,13 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -178,6 +181,8 @@ public class FireBaseActivity extends AppCompatActivity {
 
     //Este metodo recoge el intent que se le envia de nuevo al ser LaunchMode=SingleTop
 
+
+
     protected void onNewIntent(Intent intent){
 
 
@@ -263,6 +268,7 @@ public class FireBaseActivity extends AppCompatActivity {
 
        /* mAdapter.cleanup();*/
     }
+
 
 
     private void writeNewLocation(String locs, Location loc) {

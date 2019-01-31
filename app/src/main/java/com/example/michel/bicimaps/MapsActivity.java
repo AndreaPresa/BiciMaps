@@ -195,8 +195,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         latLngList = new ArrayList<>();
 
 
-
-
         //Parte de arriba del Maps Layout
         mapsOptions = findViewById(R.id.cmbMaptype);
         mode = findViewById(R.id.cmbMode);
@@ -692,7 +690,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //Metodo para escribir la fecha en la pantalla
 
     private void updateLabel() {
-
         if(!realTime_flag) {
         adapter_mode.remove(dateSpinner);
         dateSpinner = sdf.format(myCalendar.getTime());
@@ -701,66 +698,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         dateSpinner = sdf.format(myCalendar.getTime());
 
         //Actualizo el valor de la referencia cada vez que se cambia de fecha
-        dbLocations =
-                FirebaseDatabase.getInstance().getReference()
-                        .child("locations").child(dateSpinner);
 
-            dbLocations.addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        dBhaschild = true;
-                    }
+        dbLocations =FirebaseDatabase.getInstance().getReference().child("locations").child(dateSpinner);
+
+        dbLocations.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                latLngList.clear();
+
+                for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
+                    com.example.michel.bicimaps.Location loc;
+                    loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
+                    LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
+                    WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
+                    latLngList.add(data);
                 }
 
-                @Override
-                public void onCancelled(DatabaseError databaseError) {
-                    Log.d("READ OP CANCELLED1", "No reading from FB");
-
-                }
-            });
-
-            // comprobamos si hay datos para que no se pare la ejecucion
-
-
-            if (dBhaschild) {
-/*
-                    latLngList.clear();
-*/
-                    dbLocations.addValueEventListener(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(DataSnapshot dataSnapshot) {
-                            latLngList.clear();
-                            for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                                com.example.michel.bicimaps.Location loc;
-                                loc = postSnapshot.getValue(com.example.michel.bicimaps.Location.class);
-                                LatLng latLng = new LatLng(loc.getLat(), loc.getLon());
-                                WeightedLatLng data = new WeightedLatLng(latLng, loc.getPm());
-                                latLngList.add(data);
-                            }
-
-                        }
-
-                        @Override
-                        public void onCancelled(DatabaseError databaseError) {
-                            Log.d("READ OP CANCELLED2", "No reading from FB");
-
-                        }
-                    });
-
-                    if(realTime_flag && latLngList!=null){
-                        addHeatMap();
+                if(latLngList.size()== 0){
+                    Toast.makeText(mContext, "No hay datos para la fecha elegida",
+                            Toast.LENGTH_LONG).show(); } else {
+                addHeatMap();
                     }
-            }
-            else {
-                Toast.makeText(mContext, "No hay datos para la fecha elegida",
-                        Toast.LENGTH_LONG).show();
+
             }
 
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
     }
 
 
-    /** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+
+
+
+                /** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 
     /** PERMISOS Y HABILITACIONES */
